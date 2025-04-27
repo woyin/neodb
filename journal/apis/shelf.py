@@ -8,6 +8,7 @@ from ninja.pagination import paginate
 
 from catalog.common.models import AvailableItemCategory, Item, ItemCategory, ItemSchema
 from common.api import PageNumberPagination, Result, api
+from common.utils import get_uuid_or_404
 from journal.models.common import q_owned_piece_visible_to_user
 from journal.models.shelf import ShelfMember
 from users.models.apidentity import APIdentity
@@ -38,6 +39,12 @@ class MarkInSchema(Schema):
     tags: list[str] = []
     created_time: datetime | None = None
     post_to_fediverse: bool = False
+
+
+class MarkLogSchema(Schema):
+    shelf_type: ShelfType | None
+    # item: ItemSchema
+    timestamp: datetime
 
 
 @api.get(
@@ -115,6 +122,27 @@ def get_mark_by_item(request, item_uuid: str, response: HttpResponse):
     return shelfmember
 
 
+@api.get(
+    "/me/shelf/items/{item_uuids}",
+    response={200: List[MarkSchema], 401: Result},
+    tags=["shelf"],
+)
+def get_marks_by_item_list(request, item_uuids: str, response: HttpResponse):
+    """
+    Get a list of holding mark on current user's shelf by a list of item uuids.
+
+    Input should be no more than 20, comma-separated.
+    Output has no guarenteed order, and may has less items than input,
+    as some items may be merged/deleted or not marked.
+    """
+    uuids = [get_uuid_or_404(uid) for uid in item_uuids.split(",")[:20]]
+    items = Item.objects.filter(
+        uid__in=uuids, is_deleted=False, merged_to_item__isnull=True
+    )
+    marks = Mark.get_marks_by_items(request.user.identity, items, request.user)
+    return [m for m in marks.values() if m.shelf_type]
+
+
 @api.post(
     "/me/shelf/item/{item_uuid}",
     response={200: Result, 401: Result, 403: Result, 404: Result},
@@ -162,3 +190,27 @@ def delete_mark(request, item_uuid: str):
     m = Mark(request.user.identity, item)
     m.delete(keep_tags=True)
     return 200, {"message": "OK"}
+
+
+@api.get(
+    "/me/shelf/item/{item_uuid}/logs",
+    response={
+        200: List[MarkLogSchema],
+        302: Result,
+        401: Result,
+        404: Result,
+    },
+    tags=["shelf"],
+)
+@paginate(PageNumberPagination)
+def get_mark_logs_by_item(request, item_uuid: str, response: HttpResponse):
+    """
+    Get holding mark on current user's shelf by item uuid
+    """
+    item = Item.get_by_url(item_uuid)
+    if not item or item.is_deleted:
+        return 404, {"message": "Item not found"}
+    if item.merged_to_item:
+        response["Location"] = f"/api/me/shelf/item/{item.merged_to_item.uuid}/logs"
+        return 302, {"message": "Item merged", "url": item.merged_to_item.api_url}
+    return Mark(request.user.identity, item).logs
