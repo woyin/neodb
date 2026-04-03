@@ -1,24 +1,24 @@
-import re
+import csv
 from datetime import datetime
 
 from django.utils import timezone
 from django.utils.timezone import make_aware
+from django.utils.translation import gettext as _
+from loguru import logger
+from markdownify import markdownify as md
 
 from catalog.common import *
 from catalog.common.downloaders import *
 from catalog.models import *
+from catalog.models.utils import detect_isbn_asin
 from journal.models import *
 from users.models import Task
 
-re_list = r"^https://www\.goodreads\.com/list/show/\d+"
-re_shelf = r"^https://www\.goodreads\.com/review/list/\d+[^\?]*\?shelf=[^&]+"
-re_profile = r"^https://www\.goodreads\.com/user/show/(\d+)"
-gr_rating = {
-    "did not like it": 2,
-    "it was ok": 4,
-    "liked it": 6,
-    "really liked it": 8,
-    "it was amazing": 10,
+SHELF_MAP = {
+    "read": ShelfType.COMPLETE,
+    "to-read": ShelfType.WISHLIST,
+    "currently-reading": ShelfType.PROGRESS,
+    "did-not-finish": ShelfType.DROPPED,
 }
 
 
@@ -35,230 +35,171 @@ class GoodreadsImporter(Task):
         "failed": 0,
         "visibility": 0,
         "failed_urls": [],
-        "url": None,
+        "file": None,
     }
 
     @classmethod
-    def validate_url(cls, raw_url):
-        match_list = re.match(re_list, raw_url)
-        match_shelf = re.match(re_shelf, raw_url)
-        match_profile = re.match(re_profile, raw_url)
-        if match_profile or match_shelf or match_list:
-            return True
-        else:
+    def validate_file(cls, uploaded_file) -> bool:
+        try:
+            first_line = uploaded_file.read(200).decode("utf-8", errors="ignore")
+            uploaded_file.seek(0)
+            return first_line.startswith("Book Id,")
+        except Exception:
             return False
 
-    def run(self):
-        url = self.metadata["url"]
-        user = self.user
-        match_list = re.match(re_list, url)
-        match_shelf = re.match(re_shelf, url)
-        match_profile = re.match(re_profile, url)
-        total = 0
-        visibility = user.preference.default_visibility
-        shelf = None
-        if match_shelf:
-            shelf = self.parse_shelf(match_shelf[0])
-        elif match_list:
-            shelf = self.parse_list(match_list[0])
-        if shelf:
-            if shelf["title"] and shelf["books"]:
-                collection = Collection.objects.create(
-                    title=shelf["title"],
-                    brief=shelf["description"]
-                    + "\n\nImported from [Goodreads]("
-                    + url
-                    + ")",
-                    owner=user.identity,
-                )
-                for book in shelf["books"]:
-                    collection.append_item(book["book"], note=book["review"])
-                    total += 1
-                collection.save()
-            self.message = f"Imported {total} books from Goodreads as a Collection {shelf['title']}."
-        elif match_profile:
-            uid = match_profile[1]
-            shelves = {
-                ShelfType.WISHLIST: f"https://www.goodreads.com/review/list/{uid}?shelf=to-read",
-                ShelfType.PROGRESS: f"https://www.goodreads.com/review/list/{uid}?shelf=currently-reading",
-                ShelfType.COMPLETE: f"https://www.goodreads.com/review/list/{uid}?shelf=read",
-            }
-            for shelf_type in shelves:
-                shelf_url = shelves.get(shelf_type)
-                shelf = self.parse_shelf(shelf_url)
-                for book in shelf["books"]:
-                    mark = Mark(user.identity, book["book"])
-                    if (
-                        (
-                            mark.shelf_type == shelf_type
-                            and mark.comment_text == book["review"]
-                        )
-                        or (
-                            mark.shelf_type == ShelfType.COMPLETE
-                            and shelf_type != ShelfType.COMPLETE
-                        )
-                        or (
-                            mark.shelf_type == ShelfType.PROGRESS
-                            and shelf_type == ShelfType.WISHLIST
-                        )
-                    ):
-                        print(
-                            f"Skip {shelf_type}/{book['book']} bc it was marked {mark.shelf_type}"
-                        )
-                    else:
-                        mark.update(
-                            shelf_type,
-                            book["review"],
-                            book["rating"],
-                            visibility=visibility,
-                            created_time=book["last_updated"] or timezone.now(),
-                        )
-                    total += 1
-            self.message = f"Imported {total} records from Goodreads profile."
-        self.metadata["total"] = total
-        self.save()
+    @staticmethod
+    def _strip_isbn(s: str) -> str:
+        s = s.strip()
+        if s.startswith('="') and s.endswith('"'):
+            return s[2:-1]
+        return s
 
     @classmethod
-    def get_book(cls, url):
-        site = SiteManager.get_site_by_url(url)
+    def find_item(cls, book_id: str, isbn13_raw: str, isbn_raw: str):
+        # Step 1: DB lookup by Goodreads ID (no network call)
+        site = SiteManager.get_site_by_id(IdType.Goodreads, book_id)
         if site:
-            book = site.get_item()
-            if not book:
-                resource = site.get_resource_ready()
-                if resource and resource.item:
-                    book = resource.item
-            return book
+            item = site.get_item()
+            if item:
+                return item
 
-    @classmethod
-    def parse_shelf(cls, url):
-        # return {'title': 'abc', books: [{'book': obj, 'rating': 10, 'review': 'txt'}, ...]}
-        title = ""
-        books = []
-        url_shelf = url + "&view=table"
-        while url_shelf:
-            print(f"Shelf loading {url_shelf}")
-            try:
-                content = BasicDownloader(url_shelf).download().html()
-                title_elem = content.xpath("//span[@class='h1Shelf']/text()")
-                if not title_elem:
-                    print(f"Shelf parsing error {url_shelf}")
-                    break
-                title = title_elem[0].strip()
-                print(f"Shelf title: {title}")
-            except Exception:
-                print(f"Shelf loading/parsing error {url_shelf}")
-                break
-            cells = content.xpath("//tbody[@id='booksBody']/tr")
-            for cell in cells:
-                url_book = (
-                    "https://www.goodreads.com"
-                    + cell.xpath(".//td[@class='field title']//a/@href")[0].strip()
-                )
-                # has_review = cell.xpath(
-                #     ".//td[@class='field actions']//a/text()")[0].strip() == 'view (with text)'
-                rating_elem = cell.xpath(".//td[@class='field rating']//span/@title")
-                rating = gr_rating.get(rating_elem[0].strip()) if rating_elem else None
-                url_review = (
-                    "https://www.goodreads.com"
-                    + cell.xpath(".//td[@class='field actions']//a/@href")[0].strip()
-                )
-                review = None
-                last_updated = None
-                date_elem = cell.xpath(".//td[@class='field date_added']//span/text()")
-                for d in date_elem:
-                    date_matched = re.search(r"(\w+)\s+(\d+),\s+(\d+)", d)
-                    if date_matched:
-                        last_updated = make_aware(
-                            datetime.strptime(
-                                date_matched[1]
-                                + " "
-                                + date_matched[2]
-                                + " "
-                                + date_matched[3],
-                                "%b %d %Y",
-                            )
+        # Step 2: DB lookup by ISBN13 (no scraping)
+        isbn13 = cls._strip_isbn(isbn13_raw)
+        if isbn13:
+            er = ExternalResource.objects.filter(
+                id_type=IdType.ISBN, id_value=isbn13
+            ).first()
+            if er and er.item:
+                return er.item
+
+        # Step 3: DB lookup by ISBN10 / ASIN (no scraping)
+        isbn = cls._strip_isbn(isbn_raw)
+        if isbn:
+            id_type, id_value = detect_isbn_asin(isbn)
+            if id_type and id_value:
+                er = ExternalResource.objects.filter(
+                    id_type=id_type, id_value=id_value
+                ).first()
+                if er and er.item:
+                    return er.item
+
+        # Step 4: Scrape Goodreads
+        try:
+            scrape_site = SiteManager.get_site_by_url(
+                f"https://www.goodreads.com/book/show/{book_id}",
+                detect_redirection=False,
+            )
+            if scrape_site:
+                resource = scrape_site.get_resource_ready()
+                if resource:
+                    item = scrape_site.get_item()
+                    if item:
+                        return item
+        except Exception as e:
+            logger.error(f"Error scraping Goodreads book {book_id}: {e}")
+
+        return None
+
+    def progress(self, mark_state: int, book_id: str | None = None) -> None:
+        self.metadata["processed"] += 1
+        match mark_state:
+            case 1:
+                self.metadata["imported"] += 1
+            case 0:
+                self.metadata["skipped"] += 1
+            case _:
+                self.metadata["failed"] += 1
+                if book_id:
+                    self.metadata["failed_urls"].append(book_id)
+        self.message = f"{self.metadata['imported']} imported, {self.metadata['skipped']} skipped, {self.metadata['failed']} failed"
+        self.save(update_fields=["metadata", "message"])
+
+    def run(self) -> None:
+        filename = self.metadata["file"]
+        visibility = self.metadata["visibility"]
+        with open(filename, encoding="utf-8-sig") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                shelf_type = SHELF_MAP.get(row["Exclusive Shelf"])
+                if shelf_type is None:
+                    self.progress(0)
+                    continue
+
+                book_id = row["Book Id"]
+                item = self.find_item(book_id, row["ISBN13"], row["ISBN"])
+                if not item:
+                    logger.warning(f"Could not find item for Goodreads book {book_id}")
+                    self.progress(-1, book_id)
+                    continue
+
+                rating_raw = int(row["My Rating"] or 0)
+                rating = rating_raw * 2 if rating_raw else None
+
+                review_html = row.get("My Review", "").strip()
+                comment: str | None = None
+                long_review: str | None = None
+                if review_html:
+                    has_html = "<" in review_html
+                    review_text = md(review_html) if has_html else review_html
+                    if not has_html and len(review_text) < 360:
+                        comment = review_text
+                    else:
+                        long_review = review_text
+
+                if shelf_type == ShelfType.COMPLETE and row.get("Date Read"):
+                    date_str = row["Date Read"]
+                else:
+                    date_str = row.get("Date Added", "")
+
+                dt = None
+                if date_str:
+                    try:
+                        dt = make_aware(
+                            datetime.strptime(date_str, "%Y/%m/%d").replace(hour=22)
                         )
-                try:
-                    c2 = BasicDownloader(url_review).download().html()
-                    review_elem = c2.xpath("//div[@itemprop='reviewBody']/text()")
-                    review = (
-                        "\n".join(p.strip() for p in review_elem) if review_elem else ""
-                    )
-                    date_elem = c2.xpath("//div[@class='readingTimeline__text']/text()")
-                    for d in date_elem:
-                        date_matched = re.search(r"(\w+)\s+(\d+),\s+(\d+)", d)
-                        if date_matched:
-                            last_updated = make_aware(
-                                datetime.strptime(
-                                    date_matched[1]
-                                    + " "
-                                    + date_matched[2]
-                                    + " "
-                                    + date_matched[3],
-                                    "%B %d %Y",
-                                )
-                            )
-                except Exception:
-                    print(f"Error loading/parsing review{url_review}, ignored")
-                try:
-                    book = cls.get_book(url_book)
-                    books.append(
-                        {
-                            "url": url_book,
-                            "book": book,
-                            "rating": rating,
-                            "review": review,
-                            "last_updated": last_updated,
-                        }
-                    )
-                except Exception as e:
-                    print(f"Error adding {url_book} {e}")
-                    pass  # likely just download error
-            next_elem = content.xpath("//a[@class='next_page']/@href")
-            url_shelf = (
-                f"https://www.goodreads.com{next_elem[0].strip()}"
-                if next_elem
-                else None
-            )
-        return {"title": title, "description": "", "books": books}
+                    except ValueError:
+                        pass
 
-    @classmethod
-    def parse_list(cls, url):
-        # return {'title': 'abc', books: [{'book': obj, 'rating': 10, 'review': 'txt'}, ...]}
-        title = ""
-        description = ""
-        books = []
-        url_shelf = url
-        while url_shelf:
-            print(f"List loading {url_shelf}")
-            content = BasicDownloader(url_shelf).download().html()
-            title_elem = content.xpath('//h1[@class="gr-h1 gr-h1--serif"]/text()')
-            if not title_elem:
-                print(f"List parsing error {url_shelf}")
-                break
-            title: str = title_elem[0].strip()
-            desc_elem = content.xpath('//div[@class="mediumText"]/text()')
-            description: str = desc_elem[0].strip()
-            print("List title: " + title)
-            links = content.xpath('//a[@class="bookTitle"]/@href')
-            for link in links:
-                url_book = "https://www.goodreads.com" + link
-                try:
-                    book = cls.get_book(url_book)
-                    books.append(
-                        {
-                            "url": url_book,
-                            "book": book,
-                            "review": "",
-                        }
+                mark = Mark(self.user.identity, item)
+                is_downgrade = (
+                    mark.shelf_type == ShelfType.COMPLETE
+                    and shelf_type != ShelfType.COMPLETE
+                ) or (
+                    mark.shelf_type in [ShelfType.PROGRESS, ShelfType.DROPPED]
+                    and shelf_type == ShelfType.WISHLIST
+                )
+                if is_downgrade:
+                    self.progress(0)
+                    continue
+                if mark.shelf_type == shelf_type:
+                    existing_review = Review.objects.filter(
+                        owner=self.user.identity, item=item
+                    ).first()
+                    review_body = existing_review.body if existing_review else None
+                    if comment == mark.comment_text and long_review == review_body:
+                        self.progress(0)
+                        continue
+
+                mark.update(
+                    shelf_type,
+                    comment,
+                    rating,
+                    visibility=visibility,
+                    created_time=dt or timezone.now(),
+                )
+                if long_review:
+                    item_title = item.title or row["Title"]
+                    title = _("a review of {item_title}").format(item_title=item_title)
+                    Review.update_item_review(
+                        item,
+                        self.user.identity,
+                        title,
+                        long_review,
+                        visibility,
+                        dt or timezone.now(),
                     )
-                except Exception:
-                    print("Error adding " + url_book)
-                    pass  # likely just download error
-            next_elem = content.xpath("//a[@class='next_page']/@href")
-            url_shelf = (
-                f"https://www.goodreads.com{next_elem[0].strip()}"
-                if next_elem
-                else None
-            )
-        return {"title": title, "description": description, "books": books}
+                self.progress(1)
+
+        self.metadata["total"] = self.metadata["processed"]
+        self.message = f"{self.metadata['imported']} imported, {self.metadata['skipped']} skipped, {self.metadata['failed']} failed"
+        self.save(update_fields=["metadata", "message"])

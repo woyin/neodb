@@ -280,13 +280,21 @@ def sync_mastodon_preference(request):
 def import_goodreads(request):
     if request.method != "POST":
         return redirect(reverse("users:data"))
-    raw_url = request.POST.get("url")
-    if not GoodreadsImporter.validate_url(raw_url):
-        raise BadRequest(_("Invalid URL."))
+    if not GoodreadsImporter.validate_file(request.FILES.get("file")):
+        raise BadRequest(_("Invalid file."))
+    f = (
+        settings.MEDIA_ROOT
+        + "/"
+        + GenerateDateUUIDMediaFilePath("x.csv", settings.SYNC_FILE_PATH_ROOT)
+    )
+    os.makedirs(os.path.dirname(f), exist_ok=True)
+    with open(f, "wb+") as destination:
+        for chunk in request.FILES["file"].chunks():
+            destination.write(chunk)
     task = GoodreadsImporter.create(
         request.user,
         visibility=int(request.POST.get("visibility", 0)),
-        url=raw_url,
+        file=f,
     )
     task.enqueue()
     return redirect(reverse("users:user_task_status", args=(task.type,)))

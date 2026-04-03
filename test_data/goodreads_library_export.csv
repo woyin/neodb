@@ -1,0 +1,10 @@
+Book Id,Title,Author,Author l-f,Additional Authors,ISBN,ISBN13,My Rating,Average Rating,Publisher,Binding,Number of Pages,Year Published,Original Publication Year,Date Read,Date Added,Bookshelves,Bookshelves with positions,Exclusive Shelf,My Review,Spoiler,Private Notes,Read Count,Owned Copies
+1001,Tales from Earthsea,Ursula K. Le Guin,"Guin, Ursula K. Le",,="","=""""",4,4.09,Gollancz,Hardcover,300,2001,2001,2026/04/02,2026/04/01,,,read,"<b>bold</b><br/>plain text",false,,1,0
+1002,Brave New World,Aldous Huxley,"Huxley, Aldous",,="","=""""",5,3.98,HarperPerennial,Paperback,288,1998,1932,2026/03/15,2026/03/01,,,read,,false,,1,0
+1003,The Left Hand of Darkness,Ursula K. Le Guin,"Guin, Ursula K. Le",,="","=""""",0,4.10,Ace,Paperback,286,2019,1969,2026/02/01,2026/01/15,,,read,,false,,1,0
+1004,Foundation,Isaac Asimov,"Asimov, Isaac",,="","=""""",0,4.20,Spectra,Paperback,255,2004,1951,,2026/03/01,,,to-read,,false,,0,0
+1005,Dune,Frank Herbert,"Herbert, Frank",,="","=""""",0,4.26,Ace,Paperback,412,2019,1965,,2026/03/10,,,currently-reading,,false,,0,0
+1006,The Dispossessed,Ursula K. Le Guin,"Guin, Ursula K. Le",,="","=""""",0,4.17,Eos,Paperback,387,2003,1974,,2026/02/20,,,did-not-finish,,false,,0,0
+1007,A Random Book,Some Author,"Author, Some",,="","=""""",0,3.50,Publisher,Paperback,200,2020,2020,,2026/01/01,custom-shelf,custom-shelf (#1),custom-shelf,,false,,0,0
+1008,Fahrenheit 451,Ray Bradbury,"Bradbury, Ray",,="0152023984","=""9780152023980""",3,3.97,Harcourt,Paperback,249,2011,1953,2025/12/20,2025/12/01,,,read,,false,,1,0
+9999,Nonexistent Book,Unknown Author,"Author, Unknown",,="","=""""",1,0.00,Publisher,Paperback,0,2020,2020,2026/01/01,2026/01/01,,,read,,false,,1,0
