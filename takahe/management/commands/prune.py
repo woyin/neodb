@@ -1,17 +1,17 @@
 import datetime
 import sys
 
-from django.conf import settings
-from django.core.management.base import BaseCommand
 from django.db.models import Exists, OuterRef, Q
 from django.utils import timezone
 from tqdm import tqdm
 
+from common.management.base import SiteCommand
+from common.models import SiteConfig
 from takahe.models import Domain, Post
 from takahe.utils import Takahe
 
 
-class Command(BaseCommand):
+class Command(SiteCommand):
     help = "Prunes posts that are old, not local and have no local interaction"
 
     def add_arguments(self, parser):
@@ -34,7 +34,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, number: int, dry_run: bool, verbose: bool, *args, **options):
-        horizon = settings.REMOTE_PRUNE_HORIZON
+        horizon = SiteConfig.system.remote_prune_horizon
         if not horizon:
             self.stdout.write(self.style.WARNING("Pruning has been disabled"))
             sys.exit(0)

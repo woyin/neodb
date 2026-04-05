@@ -5,12 +5,10 @@ from loguru import logger
 from rq.job import Job
 from rq.registry import ScheduledJobRegistry
 
-from boofilsic import settings
+from common.models.site_config import SiteConfig
 
 
 class BaseJob:
-    interval = timedelta(0)  # 0 = disabled, don't set it less than 1 minute
-
     @classmethod
     def cancel(cls):
         job_id = cls.__name__
@@ -25,10 +23,21 @@ class BaseJob:
             pass
 
     @classmethod
+    def get_interval(cls) -> timedelta:
+        """Return job interval. Override to read from SiteConfig."""
+        return timedelta(0)
+
+    @classmethod
     def schedule(cls, now=False):
         job_id = cls.__name__
-        i = timedelta(seconds=0) if now else cls.interval
-        if cls.interval <= timedelta(0) or job_id in settings.DISABLE_CRON_JOBS:
+        interval = cls.get_interval()
+        i = timedelta(seconds=0) if now else interval
+        disabled = (
+            getattr(SiteConfig, "system", None)
+            and SiteConfig.system.disable_cron_jobs
+            or []
+        )
+        if interval <= timedelta(0) or job_id in disabled:
             logger.info(f"Skip disabled job {job_id}")
             return
         logger.info(f"Scheduling job {job_id} in {i}")
@@ -38,16 +47,16 @@ class BaseJob:
                 job_id=job_id,
                 result_ttl=-1,
                 failure_ttl=-1,
-                job_timeout=cls.interval.seconds - 5,
+                job_timeout=int(interval.total_seconds()) - 5,
             )
         else:
             django_rq.get_queue("cron").enqueue_in(
-                cls.interval,
+                interval,
                 cls._run,
                 job_id=job_id,
                 result_ttl=-1,
                 failure_ttl=-1,
-                job_timeout=cls.interval.seconds - 5,
+                job_timeout=int(interval.total_seconds()) - 5,
             )
 
     @classmethod
@@ -57,6 +66,7 @@ class BaseJob:
 
     @classmethod
     def _run(cls):
+        # SiteConfig is reloaded automatically by SiteConfigJob.perform()
         cls.schedule()  # schedule next run
         cls().run()
 

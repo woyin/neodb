@@ -172,6 +172,9 @@ RQ_QUEUES = {
     }
     for q in ["mastodon", "export", "import", "fetch", "crawl", "ap", "cron"]
 }
+RQ = {
+    "JOB_CLASS": "common.rq.SiteJob",
+}
 
 _parsed_search_url: parse.ParseResult = env.url("NEODB_SEARCH_URL")
 SEARCH_BACKEND = None
@@ -380,6 +383,7 @@ for app in env("NEODB_EXTRA_APPS"):
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "common.middleware.SiteConfigMiddleware",
     # "silk.middleware.SilkyMiddleware",
     "common.middleware.APIAwareSessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
