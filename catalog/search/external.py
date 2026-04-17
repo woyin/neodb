@@ -92,5 +92,14 @@ class ExternalSources:
         results = [i for i in results if i.source_url not in dedupe_urls]
         if disabled_sources:
             ds = set(disabled_sources)
-            results = [r for r in results if r.source_site.value not in ds]
+            results = [
+                r
+                for r in results
+                if (
+                    r.source_site.value
+                    if isinstance(r.source_site, SiteName)
+                    else r.source_site
+                )
+                not in ds
+            ]
         return results
