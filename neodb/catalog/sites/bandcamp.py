@@ -33,6 +33,16 @@ class Bandcamp(AbstractSite):
         return f"https://{id_value}"
 
     @classmethod
+    def url_to_id(cls, url: str):
+        # Custom domains match only URL_PATTERN_FALLBACK; without this fallback
+        # url_to_id returns None and scrape() asserts on self.url.
+        id_value = super().url_to_id(url)
+        if id_value:
+            return id_value
+        m = re.match(cls.URL_PATTERN_FALLBACK, url)
+        return m[1] if m else None
+
+    @classmethod
     def validate_url_fallback(cls, url):
         if re.match(cls.URL_PATTERN_FALLBACK, url) is None:
             return False

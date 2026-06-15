@@ -21,9 +21,12 @@ from loguru import logger
 
 from common.models import SiteConfig
 from common.models.misc import uniq
+from common.sentry import count as sentry_count
+from common.sentry import url_domain
 from common.validators import is_valid_url
 
 from ..models import ExternalResource, IdType, Item, SiteName
+from .downloaders import DownloadError
 
 
 @dataclass
@@ -552,13 +555,25 @@ class SiteManager:
                         preloaded_content=linked_resource.get("content"),
                     )
                 except Exception as e:
-                    logger.error(
+                    # DownloadError = expected third-party failure -> warn (no
+                    # Sentry issue); anything else is a real error.
+                    is_download = isinstance(e, DownloadError)
+                    log = logger.warning if is_download else logger.error
+                    log(
                         f"error fetching from {linked_site.ID_TYPE}",
                         extra={
                             "resource": resource,
                             "linked_resource": linked_resource,
                             "linked_site": linked_site,
                             "exception": e,
+                        },
+                    )
+                    # Warnings aren't Sentry issues; metric keeps them trackable.
+                    sentry_count(
+                        "catalog.linked_resource.failure",
+                        attributes={
+                            "site": str(linked_site.ID_TYPE),
+                            "reason": "download" if is_download else "error",
                         },
                     )
                     continue
@@ -606,11 +621,22 @@ class SiteManager:
                         case _:
                             logger.error(f"unknown link type {link_type}")
             else:
-                logger.error(
+                # No registered site for this link (e.g. a Douban author);
+                # expected, so warn rather than error.
+                logger.warning(
                     "unable to get site for linked resource",
                     extra={
                         "resource": resource,
                         "linked_resource": linked_resource,
+                    },
+                )
+                # Track as a metric so the volume stays visible.
+                sentry_count(
+                    "catalog.linked_resource.failure",
+                    attributes={
+                        "site": linked_resource.get("id_type")
+                        or url_domain(linked_resource.get("url")),
+                        "reason": "no_site",
                     },
                 )
         if resource.item and processed:

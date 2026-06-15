@@ -150,6 +150,22 @@ class TestBandcamp:
         assert site.url == t_url2
         assert site.id_value == t_id_value
 
+    def test_custom_domain_url_to_id(self):
+        # Regression for NEODB-SOCIAL-4MW: custom Bandcamp domains must resolve
+        # via URL_PATTERN_FALLBACK, else scrape() asserts on a None url.
+        from catalog.sites.bandcamp import Bandcamp
+
+        custom_url = "https://music.example.com/album/some-album"
+        assert Bandcamp.url_to_id(custom_url) == "music.example.com/album/some-album"
+        site = Bandcamp(url=custom_url)
+        assert site.url == custom_url
+        assert site.id_value == "music.example.com/album/some-album"
+        # standard *.bandcamp.com URLs still resolve via URL_PATTERNS
+        assert (
+            Bandcamp.url_to_id("https://intlanthem.bandcamp.com/album/in-these-times")
+            == "intlanthem.bandcamp.com/album/in-these-times"
+        )
+
     @use_local_response
     def test_scrape(self):
         t_url = "https://intlanthem.bandcamp.com/album/in-these-times?from=hpbcw"

@@ -191,8 +191,10 @@ def _fetch_task(url: str, is_refetch: bool, user_pk: int | None):
                 logger.error(f"fetch {url} failed")
                 _record_fetch_failure(url)
         except DownloadError as e:
+            # Expected external failure -> warn, not a Sentry error. Censored
+            # responses are already skipped.
             if e.response_type != RESPONSE_CENSORSHIP:
-                logger.error(f"fetch {url} error", extra={"exception": e})
+                logger.warning(f"fetch {url} error", extra={"exception": e})
             _record_fetch_failure(url)
         except Exception as e:
             logger.error(f"parse {url} error {e}", extra={"exception": e})

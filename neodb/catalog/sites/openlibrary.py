@@ -228,9 +228,15 @@ class OpenLibrary(AbstractSite):
                             )
                         )
 
-            except httpx.ReadTimeout:
+            except httpx.TimeoutException:
                 logger.warning("OpenLibrary search timeout", extra={"query": q})
                 record_search_failure(cls.SITE_NAME.value, "timeout")
+            except httpx.HTTPError as e:
+                # Transient third-party failure (timeout/connect/bad status) -> warn.
+                logger.warning(
+                    "OpenLibrary search error", extra={"query": q, "exception": e}
+                )
+                record_search_failure(cls.SITE_NAME.value, "error")
             except Exception as e:
                 logger.error(
                     "OpenLibrary search error", extra={"query": q, "exception": e}
