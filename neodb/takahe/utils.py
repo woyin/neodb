@@ -1151,6 +1151,7 @@ class Takahe:
         author_pk: int,
         viewer_pk: int | None = None,
         days: int | None = 90,
+        before_pk: int | None = None,
     ):
         qs = Post.objects.exclude(state__in=["deleted", "deleted_fanned_out"]).filter(
             author_id=author_pk
@@ -1158,7 +1159,24 @@ class Takahe:
         if days is not None:
             since = timezone.now() - timedelta(days=days)
             qs = qs.filter(published__gte=since)
-        qs = qs.order_by("-published")
+        if before_pk:
+            # Keyset on (-published, -pk): resolve the cursor pk to its
+            # published time and compare the tuple, so paging holds when pk
+            # order != published order. Sorting by published (not pk) also
+            # avoids the ORDER BY id pathology (EGGPLANT-1E7).
+            boundary = (
+                Post.objects.filter(pk=before_pk)
+                .values_list("published", flat=True)
+                .first()
+            )
+            if boundary is not None:
+                qs = qs.filter(
+                    models.Q(published__lt=boundary)
+                    | models.Q(published=boundary, pk__lt=before_pk)
+                )
+            else:
+                qs = qs.filter(pk__lt=before_pk)
+        qs = qs.order_by("-published", "-pk")
         if viewer_pk and Takahe.get_is_following(viewer_pk, author_pk):
             qs = qs.exclude(visibility=3)
         else:
