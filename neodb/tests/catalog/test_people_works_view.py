@@ -161,3 +161,54 @@ class TestPeopleWorksHidesChildren:
         ids = {w.pk for w in response.context["works"].object_list}
         assert edition.pk in ids
         assert work.pk not in ids
+
+
+@pytest.mark.django_db(databases="__all__")
+class TestPeopleWorksMergedAndDeleted:
+    def test_merged_people_works_redirects_to_target(self):
+        person1 = _author("Dan Simmons")
+        person2 = _author("Daniel Simmons")
+        person1.merge_to(person2)
+
+        response = Client().get(f"{person1.url}/works/{PeopleRole.AUTHOR.value}")
+        assert response.status_code == 302
+        assert response.headers["Location"] == (
+            f"{person2.url}/works/{PeopleRole.AUTHOR.value}"
+        )
+
+    def test_chained_merge_redirects_to_final_target_in_one_hop(self):
+        person1 = _author("Dan Simmons")
+        person2 = _author("Daniel Simmons")
+        person3 = _author("D. Simmons")
+        person1.merge_to(person2)
+        person2.merge_to(person3)
+
+        response = Client().get(f"{person1.url}/works/{PeopleRole.AUTHOR.value}")
+        assert response.status_code == 302
+        assert response.headers["Location"] == (
+            f"{person3.url}/works/{PeopleRole.AUTHOR.value}"
+        )
+
+    def test_deleted_people_works_returns_404(self):
+        person = _author()
+        person.delete(soft=True)
+
+        response = Client().get(f"{person.url}/works/{PeopleRole.AUTHOR.value}")
+        assert response.status_code == 404
+
+    def test_merged_to_deleted_target_returns_404_without_redirect(self):
+        person1 = _author("Dan Simmons")
+        person2 = _author("Daniel Simmons")
+        person1.merge_to(person2)
+        person2.delete(soft=True)
+
+        response = Client().get(f"{person1.url}/works/{PeopleRole.AUTHOR.value}")
+        assert response.status_code == 404
+
+    def test_invalid_role_on_merged_people_returns_404_without_redirect(self):
+        person1 = _author("Dan Simmons")
+        person2 = _author("Daniel Simmons")
+        person1.merge_to(person2)
+
+        response = Client().get(f"{person1.url}/works/not_a_role")
+        assert response.status_code == 404
