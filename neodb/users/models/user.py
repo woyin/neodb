@@ -94,6 +94,15 @@ class UserManager(BaseUserManager):
         from mastodon.models import Email
         from takahe.models import User as TakaheUser
 
+        # this account can only log in by emailed verification code (no
+        # password login), so refuse to create it unreachable (#1666)
+        if not settings.ENABLE_LOGIN_EMAIL:
+            raise ValidationError(
+                "This account could not log in: NeoDB has no password login"
+                " and NEODB_EMAIL_URL is not configured. Set NEODB_EMAIL_URL,"
+                " or use NEODB_ADMIN_HANDLES or `neodb-manage user --super`"
+                " instead (see docs/accounts.md)."
+            )
         Takahe.get_domain()  # ensure configuration is complete
         user = User.register(username=username, is_superuser=True)
         e = Email.new_account(email)
@@ -104,6 +113,10 @@ class UserManager(BaseUserManager):
         tu = TakaheUser.objects.get(pk=user.pk, email="@" + username)
         tu.admin = True
         tu.save()
+        logger.warning(
+            f"Password is not used for login; {username} logs in with a"
+            f" verification code sent to {email}."
+        )
         return user
 
 
