@@ -32,7 +32,9 @@ class BaseProxyView(View):
                 headers={
                     "X-Accel-Redirect": "/__takahe_accel__/",
                     "X-Takahe-RealUri": remote_url,
-                    "Cache-Control": "public",
+                    # No Cache-Control here: nginx copies it through the
+                    # accel redirect onto every response including error
+                    # passthroughs; the client TTL is added by nginx instead
                 },
             )
         else:
