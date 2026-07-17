@@ -27,7 +27,7 @@ from django.utils.translation import gettext_lazy as _
 from loguru import logger
 from ninja import Field
 
-from common.models import uniq
+from common.models import normalize_price, uniq
 from common.models.misc import int_
 
 from .common import (
@@ -96,7 +96,10 @@ class EditionInSchema(ItemInSchema):
     )
     pub_year: int | None = None
     pub_month: int | None = None
-    binding: str | None = None
+    format: str | None = None
+    binding: str | None = Field(
+        None, deprecated="Free text; use `format` (BookFormat) instead."
+    )
     price: str | None = None
     pages: int | str | None = None
     series: str | None = None
@@ -185,7 +188,7 @@ class Edition(Item):
     url_path = "book"
 
     @classmethod
-    def normalize_legacy_metadata(cls, metadata):
+    def normalize_legacy_metadata(cls, metadata: dict) -> None:
         super().normalize_legacy_metadata(metadata)
         # Sources: federated peers running older code, ndjson restores, and
         # local DB rows that predate the field type change.
@@ -201,6 +204,10 @@ class Edition(Item):
                 metadata["imprint"] = "/".join(coerced)
             else:
                 metadata.pop("imprint", None)
+        # normalize price to "<ISO4217> <amount>" where unambiguous
+        price = metadata.get("price")
+        if isinstance(price, str) and price:
+            metadata["price"] = normalize_price(price)
 
     available_roles = [
         PeopleRole.AUTHOR,

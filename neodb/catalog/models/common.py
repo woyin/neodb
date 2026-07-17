@@ -1,11 +1,21 @@
+from functools import lru_cache
+
 from django.db import models
+from django.utils.translation import get_language
 from django.utils.translation import gettext_lazy as _
 from ninja import Schema
 
+from common.models.duration import duration_to_seconds, format_duration
+
 from common.models import (
+    ALBUM_TYPE_CHOICES,
+    COUNTRY_CHOICES,
+    GAME_PLATFORM_CHOICES,
     LANGUAGE_CHOICES,
     LOCALE_CHOICES,
+    MEDIA_FORMAT_CHOICES,
     SCRIPT_CHOICES,
+    country_display_name,
     genre_choices_for,
     jsondata,
 )
@@ -186,6 +196,36 @@ class LocalizedLabelSchema(Schema):
     text: str
 
 
+class VideoFieldsResolverMixin(Schema):
+    """Shared resolvers for origin_country / release_date / length and
+    the deprecated aliases (area, showtime, duration) on Movie and TV
+    schemas. duration keeps a display-string shape for older peers and
+    clients; length carries the canonical seconds."""
+
+    @staticmethod
+    def resolve_origin_country(obj) -> list[str]:
+        return obj.origin_country or []
+
+    @staticmethod
+    def resolve_area(obj) -> list[str]:
+        return obj.origin_country or []
+
+    @staticmethod
+    def resolve_showtime(obj) -> list[dict]:
+        return [{"time": obj.release_date, "region": ""}] if obj.release_date else []
+
+    @staticmethod
+    def resolve_length(obj) -> int | None:
+        # tolerate legacy free-text values not yet migrated; numeric
+        # values are trusted as seconds
+        return duration_to_seconds(obj.length)
+
+    @staticmethod
+    def resolve_duration(obj) -> str | None:
+        seconds = duration_to_seconds(obj.length)
+        return format_duration(seconds) if seconds else None
+
+
 def get_locale_choices_for_jsonform(choices, const=False):
     """return list for jsonform schema"""
     return [{"title": v, "const" if const else "value": k} for k, v in choices]
@@ -277,6 +317,75 @@ def GenreListField(category=None):
         default=list,
         schema=schema,
     )
+
+
+@lru_cache(maxsize=None)
+def _country_jsonform_schema(lang: str) -> dict:
+    # ~250 display-name lookups + a sort; cache per UI language since the
+    # result is identical for every render in that language
+    choices = get_locale_choices_for_jsonform(
+        sorted(
+            ((code, country_display_name(code)) for code, _ in COUNTRY_CHOICES),
+            key=lambda x: x[1],
+        ),
+        const=True,
+    )
+    return {
+        "type": "array",
+        "items": {"oneOf": choices + [{"title": "Other", "type": "string"}]},
+        "uniqueItems": True,
+    }
+
+
+def CountryListField():
+    """ArrayField of ISO 3166-1 alpha-2 codes with an "Other" passthrough.
+
+    The schema is a callable so the dropdown labels follow the active UI
+    language at render time (django_jsonform resolves callable schemas).
+    """
+
+    def schema():
+        return _country_jsonform_schema(get_language() or "en")
+
+    return jsondata.ArrayField(
+        verbose_name=_("origin country"),
+        base_field=models.CharField(blank=True, default="", max_length=100),
+        null=True,
+        blank=True,
+        default=list,
+        schema=schema,
+    )
+
+
+def _slug_list_field(verbose_name, choices):
+    def schema():
+        options = get_locale_choices_for_jsonform(choices, const=True)
+        return {
+            "type": "array",
+            "items": {"oneOf": options + [{"title": "Other", "type": "string"}]},
+            "uniqueItems": True,
+        }
+
+    return jsondata.ArrayField(
+        verbose_name=verbose_name,
+        base_field=models.CharField(blank=True, default="", max_length=100),
+        null=True,
+        blank=True,
+        default=list,
+        schema=schema,
+    )
+
+
+def AlbumTypeListField():
+    return _slug_list_field(_("album type"), ALBUM_TYPE_CHOICES)
+
+
+def GamePlatformListField():
+    return _slug_list_field(_("platform"), GAME_PLATFORM_CHOICES)
+
+
+def MediaFormatListField():
+    return _slug_list_field(_("media format"), MEDIA_FORMAT_CHOICES)
 
 
 def LanguageListField(script=False):

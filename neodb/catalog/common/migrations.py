@@ -825,3 +825,122 @@ def edition_normalize_publisher_imprint_20260428(batch_size: int = 1000) -> None
         f"Edition publisher/imprint normalization: {converted} updated, "
         f"{deleted} orphan imprint credits deleted"
     )
+
+
+def unify_metadata_20260715(
+    start_pk: int = 0, batch_size: int = 500, dry_run: bool = False
+) -> None:
+    """One-time conversion for the metadata unification release.
+
+    Applies each class's normalize_legacy_metadata to stored Item.metadata:
+    - Movie/TVShow/TVSeason: duration and single_episode_length free text
+      or minutes -> seconds; area -> origin_country (ISO 3166-1 alpha-2);
+      showtime/year -> release_date (partial ISO, earliest entry)
+    - Album: duration ms -> seconds; media -> media_format slug list;
+      album_type -> slug list; release_date canonicalized
+    - Game: release_year -> release_date; localized release_date text -> ISO
+    - Edition: price -> "<ISO4217> <amount>" where unambiguous
+
+    Restart-safe: one pk-ordered pass over all items (resume with --start),
+    and idempotent because legacy keys are removed on first conversion (the
+    duration minutes-inference only fires when legacy keys are present).
+    bulk_update skips post_save signals, so each flushed batch is reindexed
+    immediately after it is written.
+    """
+    import copy
+
+    from catalog.models import (
+        Album,
+        Edition,
+        Game,
+        Item,
+        Movie,
+        TVSeason,
+        TVShow,
+        item_content_types,
+    )
+    from catalog.search import CatalogIndex
+
+    classes = [Movie, TVShow, TVSeason, Album, Game, Edition]
+    ctype_map = {
+        ct_id: cls for cls, ct_id in item_content_types().items() if cls in classes
+    }
+    index = None
+    if not dry_run:
+        index = CatalogIndex.instance()
+        if not index.initialize_collection(max_wait=30):
+            logger.error("Index is not ready, migration aborted.")
+            return
+
+    qs = (
+        Item.objects.non_polymorphic()
+        .filter(
+            is_deleted=False,
+            merged_to_item__isnull=True,
+            polymorphic_ctype_id__in=list(ctype_map),
+            pk__gte=start_pk,
+        )
+        .order_by("pk")
+    )
+    total = qs.count()
+    logger.warning(f"unify_metadata scanning {total} items (from pk {start_pk})")
+    updated = 0
+    reindexed = 0
+    last_pk = start_pk
+    pending: list = []
+
+    def flush() -> None:
+        nonlocal reindexed
+        if not pending:
+            return
+        if not dry_run:
+            Item.objects.bulk_update(pending, ["metadata"])
+            # bulk_update bypasses save()->update_index(); reindex the
+            # batch now (re-fetch polymorphic for to_indexable_doc)
+            if index:
+                items = Item.objects.filter(pk__in=[i.pk for i in pending])
+                reindexed += index.replace_docs(index.items_to_docs(items))
+        pending.clear()
+
+    with tqdm(total=total, desc="unify_metadata") as pbar:
+        for pk, ctype_id, metadata in qs.values_list(
+            "pk", "polymorphic_ctype_id", "metadata"
+        ).iterator(chunk_size=batch_size):
+            last_pk = pk
+            pbar.update(1)
+            cls = ctype_map.get(ctype_id)
+            if cls is None or not isinstance(metadata, dict) or not metadata:
+                continue
+            new_metadata = copy.deepcopy(metadata)
+            try:
+                cls.normalize_legacy_metadata(new_metadata)
+            except Exception as e:
+                logger.error(f"unify_metadata error on {cls.__name__} {pk}: {e}")
+                continue
+            if new_metadata != metadata:
+                if dry_run and updated < 20:
+                    changed_keys = {
+                        k
+                        for k in set(metadata) | set(new_metadata)
+                        if metadata.get(k) != new_metadata.get(k)
+                    }
+                    diff = {
+                        k: (metadata.get(k), new_metadata.get(k)) for k in changed_keys
+                    }
+                    logger.info(f"dry run {cls.__name__} {pk}: {diff}")
+                pending.append(Item(pk=pk, metadata=new_metadata))
+                updated += 1
+            if len(pending) >= batch_size:
+                flush()
+                pbar.set_postfix(updated=updated, pk=last_pk)
+        flush()
+
+    if dry_run:
+        logger.warning(
+            f"unify_metadata dry run complete; {updated} of {total} items would be updated."
+        )
+    else:
+        logger.warning(
+            f"unify_metadata complete: {updated} of {total} items updated, "
+            f"{reindexed} docs reindexed, last pk {last_pk}."
+        )

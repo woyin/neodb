@@ -31,15 +31,22 @@ from typing import TYPE_CHECKING
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from loguru import logger
-from ninja import Schema
+from ninja import Field, Schema
 
+from common.models import (
+    duration_to_seconds,
+    partial_date_to_int,
+    year_of_partial_date,
+)
 from common.models.lang import RE_LOCALIZED_SEASON_NUMBERS, localize_number
-from common.models.misc import int_, uniq
+from common.models.misc import uniq
 
 from .common import (
     LIST_OF_STR_SCHEMA,
+    CountryListField,
     GenreListField,
     LanguageListField,
+    VideoFieldsResolverMixin,
     jsondata,
 )
 from .item import (
@@ -54,6 +61,7 @@ from .item import (
     PrimaryLookupIdDescriptor,
 )
 from .people import PeopleRole
+from .utils import normalize_legacy_video_metadata
 
 
 class _TVCreditResolverMixin(Schema):
@@ -74,7 +82,7 @@ class _TVCreditResolverMixin(Schema):
         return obj.credit_names_by_role("producer")
 
 
-class TVShowInSchema(_TVCreditResolverMixin, ItemInSchema):
+class TVShowInSchema(VideoFieldsResolverMixin, _TVCreditResolverMixin, ItemInSchema):
     season_count: int | None = None
     orig_title: str | None = None
     director: list[str]
@@ -83,11 +91,25 @@ class TVShowInSchema(_TVCreditResolverMixin, ItemInSchema):
     producer: list[str]
     genre: list[str]
     language: list[str]
-    area: list[str]
-    year: int | None = None
-    site: str | None = None
+    origin_country: list[str]
+    release_date: str | None = None
+    # year is deprecated
+    year: int | None = Field(
+        None, deprecated="Use the year part of `release_date` instead."
+    )
+    official_site: str | None = Field(None, alias="site")
+    site: str | None = Field(None, deprecated="Use `official_site` instead.")
+    length: int | None = None
+    duration: str | None = Field(
+        None, deprecated="Display string; use `length` (seconds) instead."
+    )
     episode_count: int | None = None
     season_uuids: list[str]
+    # area and showtime are deprecated
+    area: list[str] = Field(
+        [], deprecated="Use `origin_country` (ISO 3166-1 alpha-2) instead."
+    )
+    showtime: list[dict] = Field([], deprecated="Use `release_date` instead.")
 
 
 class TVShowSchema(TVShowInSchema, BaseSchema):
@@ -96,7 +118,7 @@ class TVShowSchema(TVShowInSchema, BaseSchema):
     pass
 
 
-class TVSeasonInSchema(_TVCreditResolverMixin, ItemInSchema):
+class TVSeasonInSchema(VideoFieldsResolverMixin, _TVCreditResolverMixin, ItemInSchema):
     season_number: int | None = None
     orig_title: str | None = None
     director: list[str]
@@ -105,11 +127,25 @@ class TVSeasonInSchema(_TVCreditResolverMixin, ItemInSchema):
     producer: list[str]
     genre: list[str]
     language: list[str]
-    area: list[str]
-    year: int | None = None
-    site: str | None = None
+    origin_country: list[str]
+    release_date: str | None = None
+    # year is deprecated
+    year: int | None = Field(
+        None, deprecated="Use the year part of `release_date` instead."
+    )
+    official_site: str | None = Field(None, alias="site")
+    site: str | None = Field(None, deprecated="Use `official_site` instead.")
+    length: int | None = None
+    duration: str | None = Field(
+        None, deprecated="Display string; use `length` (seconds) instead."
+    )
     episode_count: int | None = None
     episode_uuids: list[str]
+    # area and showtime are deprecated
+    area: list[str] = Field(
+        [], deprecated="Use `origin_country` (ISO 3166-1 alpha-2) instead."
+    )
+    showtime: list[dict] = Field([], deprecated="Use `release_date` instead.")
 
 
 class TVSeasonSchema(TVSeasonInSchema, BaseSchema):
@@ -163,12 +199,11 @@ class TVShow(Item):
         "producer",
         "localized_description",
         "genre",
-        "showtime",
+        "release_date",
         "site",
-        "area",
+        "origin_country",
         "language",
-        "year",
-        "duration",
+        "length",
         "episode_count",
         "single_episode_length",
     ]
@@ -204,58 +239,38 @@ class TVShow(Item):
         schema=LIST_OF_STR_SCHEMA,
     )
     genre = GenreListField(ItemCategory.TV)
-    showtime = jsondata.JSONField(
-        _("show time"),
+    release_date = jsondata.CharField(
+        verbose_name=_("release date"),
         null=True,
         blank=True,
-        default=list,
-        schema={
-            "type": "list",
-            "items": {
-                "type": "dict",
-                "additionalProperties": False,
-                "keys": {
-                    "time": {
-                        "type": "string",
-                        "title": _("Date"),
-                        "placeholder": _("YYYY-MM-DD"),
-                    },
-                    "region": {
-                        "type": "string",
-                        "title": _("Region or Event"),
-                        "placeholder": _(
-                            "Germany or Toronto International Film Festival"
-                        ),
-                    },
-                },
-                "required": ["time"],
-            },
-        },
+        max_length=10,
+        help_text=_("YYYY, YYYY-MM or YYYY-MM-DD"),
     )
     site = jsondata.URLField(verbose_name=_("website"), blank=True, max_length=200)
-    area = jsondata.ArrayField(
-        verbose_name=_("region"),
-        base_field=models.CharField(
-            blank=True,
-            default="",
-            max_length=100,
-        ),
-        null=True,
-        blank=True,
-        default=list,
-    )
+    origin_country = CountryListField()
     language = LanguageListField()
 
-    year = jsondata.IntegerField(verbose_name=_("year"), null=True, blank=True)
+    # collected but not displayed or exposed in API;
+    # fate undecided, likely to be deprecated
     single_episode_length = jsondata.IntegerField(
-        verbose_name=_("episode length"), null=True, blank=True
+        verbose_name=_("episode length"),
+        null=True,
+        blank=True,
+        help_text=_("seconds"),
     )
     season_number = jsondata.IntegerField(
         null=True, blank=True
     )  # TODO remove after migration
-    duration = jsondata.CharField(
-        blank=True, max_length=200
-    )  # TODO remove after migration
+    length = jsondata.IntegerField(null=True, blank=True)  # TODO remove after migration
+
+    @property
+    def year(self) -> int | None:
+        return year_of_partial_date(self.release_date)
+
+    @classmethod
+    def normalize_legacy_metadata(cls, metadata: dict) -> None:
+        super().normalize_legacy_metadata(metadata)
+        normalize_legacy_video_metadata(metadata)
 
     @classmethod
     def lookup_id_type_choices(cls):
@@ -292,7 +307,7 @@ class TVShow(Item):
 
     def to_indexable_doc(self):
         d = super().to_indexable_doc()
-        dt = int_(self.year) * 10000
+        dt = partial_date_to_int(self.release_date)
         d["date"] = [dt] if dt else []
         d["genre"] = self.genre or []
         return d
@@ -326,8 +341,8 @@ class TVShow(Item):
                 {"@type": "Person", "name": person} for person in playwrights
             ]
 
-        if self.year:
-            data["datePublished"] = str(self.year)
+        if self.release_date:
+            data["datePublished"] = self.release_date
 
         if self.season_count:
             data["numberOfSeasons"] = self.season_count
@@ -335,8 +350,9 @@ class TVShow(Item):
         if self.episode_count:
             data["numberOfEpisodes"] = self.episode_count
 
-        if self.single_episode_length:
-            data["timeRequired"] = f"PT{self.single_episode_length}M"
+        episode_length = duration_to_seconds(self.single_episode_length)
+        if episode_length:
+            data["timeRequired"] = f"PT{episode_length // 60}M"
 
         if self.site:
             data["sameAs"] = self.site
@@ -405,12 +421,11 @@ class TVSeason(Item):
         "actor",
         "producer",
         "genre",
-        "showtime",
+        "release_date",
         "site",
-        "area",
+        "origin_country",
         "language",
-        "year",
-        "duration",
+        "length",
         "single_episode_length",
         "localized_description",
     ]
@@ -446,56 +461,36 @@ class TVSeason(Item):
         schema=LIST_OF_STR_SCHEMA,
     )
     genre = GenreListField(ItemCategory.TV)
-    showtime = jsondata.JSONField(
-        _("show time"),
+    release_date = jsondata.CharField(
+        verbose_name=_("release date"),
         null=True,
         blank=True,
-        default=list,
-        schema={
-            "type": "list",
-            "items": {
-                "type": "dict",
-                "additionalProperties": False,
-                "keys": {
-                    "time": {
-                        "type": "string",
-                        "title": _("date"),
-                        "placeholder": _("required"),
-                    },
-                    "region": {
-                        "type": "string",
-                        "title": _("region or event"),
-                        "placeholder": _(
-                            "Germany or Toronto International Film Festival"
-                        ),
-                    },
-                },
-                "required": ["time"],
-            },
-        },
+        max_length=10,
+        help_text=_("YYYY, YYYY-MM or YYYY-MM-DD"),
     )
     site = jsondata.URLField(
         verbose_name=_("website"), blank=True, default="", max_length=200
     )
-    area = jsondata.ArrayField(
-        verbose_name=_("region"),
-        base_field=models.CharField(
-            blank=True,
-            default="",
-            max_length=100,
-        ),
+    origin_country = CountryListField()
+    language = LanguageListField()
+    # collected but not displayed or exposed in API;
+    # fate undecided, likely to be deprecated
+    single_episode_length = jsondata.IntegerField(
+        verbose_name=_("episode length"),
         null=True,
         blank=True,
-        default=list,
+        help_text=_("seconds"),
     )
-    language = LanguageListField()
-    year = jsondata.IntegerField(verbose_name=_("year"), null=True, blank=True)
-    single_episode_length = jsondata.IntegerField(
-        verbose_name=_("episode length"), null=True, blank=True
-    )
-    duration = jsondata.CharField(
-        blank=True, default="", max_length=200
-    )  # TODO remove after migration
+    length = jsondata.IntegerField(null=True, blank=True)  # TODO remove after migration
+
+    @property
+    def year(self) -> int | None:
+        return year_of_partial_date(self.release_date)
+
+    @classmethod
+    def normalize_legacy_metadata(cls, metadata: dict) -> None:
+        super().normalize_legacy_metadata(metadata)
+        normalize_legacy_video_metadata(metadata)
 
     @classmethod
     def lookup_id_type_choices(cls):
@@ -554,7 +549,7 @@ class TVSeason(Item):
 
     def to_indexable_doc(self):
         d = super().to_indexable_doc()
-        dt = int_(self.year) * 10000
+        dt = partial_date_to_int(self.release_date)
         d["date"] = [dt] if dt else []
         d["genre"] = self.genre or []
         return d
@@ -601,11 +596,12 @@ class TVSeason(Item):
                 {"@type": "Person", "name": person} for person in playwrights
             ]
 
-        if self.year:
-            data["datePublished"] = str(self.year)
+        if self.release_date:
+            data["datePublished"] = self.release_date
 
-        if self.single_episode_length:
-            data["timeRequired"] = f"PT{self.single_episode_length}M"
+        episode_length = duration_to_seconds(self.single_episode_length)
+        if episode_length:
+            data["timeRequired"] = f"PT{episode_length // 60}M"
 
         if self.all_episodes:
             data["episode"] = [

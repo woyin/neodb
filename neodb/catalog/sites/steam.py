@@ -1,10 +1,11 @@
 import logging
 
+import dateparser
 from django.conf import settings
 
 from catalog.common import *
 from catalog.models import *
-from common.models import SiteConfig
+from common.models import SiteConfig, parse_partial_date
 from common.models.lang import SITE_PREFERRED_LANGUAGES
 from journal.models.renderers import html_to_text
 
@@ -75,16 +76,22 @@ class Steam(AbstractSite):
             en_data = self.download("en").get(self.id_value, {}).get("data", {})
         if not en_data or not en_data.get("name"):
             raise ParseError(self, "id")
+        # Steam dates may be year-only ("2011") or localized free text
+        # ("18 Apr, 2011"); keep partial precision, then fall back to
+        # dateparser instead of storing raw text
+        release_date_raw = en_data.get("release_date", {}).get("date")
+        release_date = parse_partial_date(release_date_raw)
+        if not release_date and release_date_raw:
+            parsed = dateparser.parse(release_date_raw)
+            release_date = parsed.strftime("%Y-%m-%d") if parsed else None
         # merge data from IGDB, use localized Steam data if available
         d = {
             "developer": en_data.get("developers", []),
             "publisher": en_data.get("publishers", []),
-            "release_date": en_data.get("release_date", {}).get("date"),
+            "release_date": release_date,
             "genre": [g["description"] for g in en_data.get("genres", [])],
-            "platform": ["PC"],
+            "platform": ["windows"],
         }
-        if en_data["release_date"].get("date"):
-            d["release_date"] = en_data["release_date"].get("date")
         d.update(pd.metadata)
         d.update(
             {

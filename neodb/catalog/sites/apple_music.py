@@ -118,7 +118,7 @@ class AppleMusic(AbstractSite):
         track_list = [t["name"] for t in matched_schema_data.get("tracks", [])]
         duration = round(
             sum(
-                (parse_duration(t["duration"]) or timedelta()).total_seconds() * 1000
+                (parse_duration(t["duration"]) or timedelta()).total_seconds()
                 for t in matched_schema_data.get("tracks", [])
             )
         )
@@ -130,7 +130,7 @@ class AppleMusic(AbstractSite):
                 "genre": genre,
                 "release_date": release_date,
                 "track_list": "\n".join(track_list),
-                "duration": duration,
+                "length": duration,
                 "cover_image_url": image_url,
             }
         )

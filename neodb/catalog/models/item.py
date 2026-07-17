@@ -19,7 +19,16 @@ from loguru import logger
 from ninja import Field, Schema
 from polymorphic.models import PolymorphicModel
 
-from common.models import get_current_locales, jsondata, uniq
+from common.models import (
+    get_current_locales,
+    jsondata,
+    normalize_album_types,
+    normalize_countries,
+    normalize_game_platforms,
+    normalize_media_formats,
+    parse_partial_date,
+    uniq,
+)
 from common.models.genre import normalize_genres
 from common.models.lang import normalize_languages
 from common.utils import get_file_absolute_url, json_ld_dumps
@@ -455,12 +464,20 @@ class Item(PolymorphicModel):
             raise ValueError("cannot merge to item in a different model")
         logger.debug(f"merging {self} to {to_item}")
         self.log_action({"!merged": [str(self.merged_to_item), str(to_item)]})
+        # heal pre-migration metadata on both sides so legacy-only values
+        # (e.g. year without release_date) survive the key-based copy below
+        if isinstance(self.metadata, dict):
+            type(self).normalize_legacy_metadata(self.metadata)
+        updated = False
+        if isinstance(to_item.metadata, dict):
+            before = dict(to_item.metadata)
+            type(to_item).normalize_legacy_metadata(to_item.metadata)
+            updated |= to_item.metadata != before
         self.merged_to_item = to_item
         self.save()
         for res in self.external_resources.all():
             res.item = to_item
             res.save()
-        updated = False
         for k in to_item.METADATA_COPY_LIST:
             v = getattr(self, k)
             if v:
@@ -1059,10 +1076,55 @@ class Item(PolymorphicModel):
                 changed = True
         return changed
 
+    def _normalize_countries(self) -> bool:
+        changed = False
+        if hasattr(self, "origin_country") and self.origin_country:
+            countries = normalize_countries(self.origin_country)
+            if self.origin_country != countries:
+                self.origin_country = countries
+                changed = True
+        return changed
+
+    def _normalize_music_formats(self) -> bool:
+        changed = False
+        if hasattr(self, "album_type") and self.album_type:
+            album_type = normalize_album_types(self.album_type)
+            if self.album_type != album_type:
+                self.album_type = album_type
+                changed = True
+        if hasattr(self, "media_format") and self.media_format:
+            media_format = normalize_media_formats(self.media_format)
+            if self.media_format != media_format:
+                self.media_format = media_format
+                changed = True
+        return changed
+
+    def _normalize_platforms(self) -> bool:
+        changed = False
+        if hasattr(self, "platform") and self.platform:
+            platform = normalize_game_platforms(self.platform)
+            if self.platform != platform:
+                self.platform = platform
+                changed = True
+        return changed
+
+    def _normalize_release_date(self) -> bool:
+        rd = getattr(self, "release_date", None)
+        if isinstance(rd, str) and rd:
+            p = parse_partial_date(rd)
+            if p and p != rd:
+                self.release_date = p
+                return True
+        return False
+
     def normalize_metadata(self, override_resources=None) -> bool:
         r = self._update_primary_lookup_id(override_resources)
         r |= self._normalize_languages()
         r |= self._normalize_genres()
+        r |= self._normalize_countries()
+        r |= self._normalize_music_formats()
+        r |= self._normalize_platforms()
+        r |= self._normalize_release_date()
         return r
 
     def merge_data_from_external_resource(
