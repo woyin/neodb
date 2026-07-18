@@ -15,6 +15,7 @@ from rq.job import Job
 from tqdm import tqdm
 
 from common.models.site_config import SiteConfig
+from common.sentry import count as sentry_count
 
 _CHAIN_KEY = "neodb:migration_enqueue:last_job_id"
 _CHAIN_TTL = 7 * 24 * 3600
@@ -840,6 +841,7 @@ def unify_metadata_20260715(
       album_type -> slug list; release_date canonicalized
     - Game: release_year -> release_date; localized release_date text -> ISO
     - Edition: price -> "<ISO4217> <amount>" where unambiguous
+      (suffixed 元 is assumed CNY)
 
     Restart-safe: one pk-ordered pass over all items (resume with --start),
     and idempotent because legacy keys are removed on first conversion (the
@@ -900,8 +902,13 @@ def unify_metadata_20260715(
             if index:
                 items = Item.objects.filter(pk__in=[i.pk for i in pending])
                 reindexed += index.replace_docs(index.items_to_docs(items))
+            sentry_count(
+                "migration", len(pending), attributes={"name": "catalog.unify_metadata"}
+            )
         pending.clear()
 
+    if not dry_run:
+        sentry_count("migration", attributes={"name": "catalog.unify_metadata.start"})
     with tqdm(total=total, desc="unify_metadata") as pbar:
         for pk, ctype_id, metadata in qs.values_list(
             "pk", "polymorphic_ctype_id", "metadata"
@@ -940,6 +947,7 @@ def unify_metadata_20260715(
             f"unify_metadata dry run complete; {updated} of {total} items would be updated."
         )
     else:
+        sentry_count("migration", attributes={"name": "catalog.unify_metadata.end"})
         logger.warning(
             f"unify_metadata complete: {updated} of {total} items updated, "
             f"{reindexed} docs reindexed, last pk {last_pk}."
