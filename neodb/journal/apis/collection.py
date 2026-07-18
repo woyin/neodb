@@ -25,7 +25,13 @@ from common.api import (
 )
 from common.sentry import record_activity
 from journal.models.collection import COVER_MAX_BYTES
-from journal.models.common import q_piece_visible_to_user
+from journal.models.common import (
+    q_owned_piece_visible_to_user,
+    q_piece_visible_to_user,
+)
+from takahe.utils import Takahe
+from users.apis import UserIdentitySchema
+from users.models.apidentity import APIdentity
 
 from ..models import (
     Collection,
@@ -57,8 +63,20 @@ class CollectionPageNumberPagination(PageNumberPagination):
             return val
         data = val.get("data") if isinstance(val, dict) else None
         if data:
-            Collection.attach_item_count_by_category(list(data))
+            collections = list(data)
+            Collection.attach_item_count_by_category(collections)
+            _prefetch_collection_owners(collections)
         return val
+
+
+def _prefetch_collection_owners(collections: List[Collection]) -> None:
+    """Batch-load takahe identities so owner (``UserIdentitySchema``)
+    serialization (display_name/avatar) does not fire a cross-db query per
+    collection.
+
+    Querysets feeding this should ``select_related("owner")``.
+    """
+    Takahe.prefetch_takahe_identities([c.owner for c in collections])
 
 
 class CollectionSchema(Schema):
@@ -76,6 +94,7 @@ class CollectionSchema(Schema):
     is_dynamic: bool
     query: str | None = None
     item_count_by_category: dict[str, int]
+    owner: UserIdentitySchema
 
 
 class CollectionInSchema(Schema):
@@ -184,8 +203,71 @@ def list_user_collections(request):
     """
     Get collections created by current user
     """
-    queryset = Collection.objects.filter(owner=request.user.identity)
+    queryset = Collection.objects.filter(owner=request.user.identity).select_related(
+        "owner"
+    )
     return queryset
+
+
+@api.get(
+    "/user/{handle}/collection/",
+    response={200: List[CollectionSchema], 401: Result, 404: Result},
+    tags=["collection"],
+    auth=OptionalOAuthAccessTokenAuth(),
+)
+@paginate(CollectionPageNumberPagination)
+def list_collections_of_user(request, handle: str):
+    """
+    Get collections created by a specific user
+
+    Only collections visible to the requesting identity are returned;
+    anonymous access is allowed if the user's profile is anonymous viewable.
+    """
+    try:
+        target = APIdentity.get_by_handle(handle)
+    except APIdentity.DoesNotExist:
+        raise Http404("User not found")
+    qv = q_owned_piece_visible_to_user(request.user, target, check_blocking=True)
+    return (
+        Collection.objects.filter(qv).select_related("owner").order_by("-edited_time")
+    )
+
+
+@api.get(
+    "/user/{handle}/collection/liked/",
+    response={200: List[CollectionSchema], 401: Result, 404: Result},
+    tags=["collection"],
+    auth=OptionalOAuthAccessTokenAuth(),
+)
+@paginate(CollectionPageNumberPagination)
+def list_liked_collections_of_user(request, handle: str):
+    """
+    Get collections liked by a specific user
+
+    Only collections visible to the requesting identity are returned;
+    anonymous access is allowed if the user's profile is anonymous viewable.
+    """
+    try:
+        target = APIdentity.get_by_handle(handle)
+    except APIdentity.DoesNotExist:
+        raise Http404("User not found")
+    viewer = request.user.identity if request.user.is_authenticated else None
+    # gate on the target like the created-collections endpoint above:
+    # hide the list rather than 403, so it's indistinguishable from empty
+    if target.restricted:
+        return Collection.objects.none()
+    if viewer is None and not target.anonymous_viewable:
+        return Collection.objects.none()
+    if viewer and viewer != target and viewer.is_blocked_by(target):
+        return Collection.objects.none()
+    queryset = Collection.objects.filter(
+        interactions__identity=target,
+        interactions__interaction_type="like",
+        interactions__target_type="Collection",
+    )
+    if viewer != target:
+        queryset = queryset.filter(q_piece_visible_to_user(request.user))
+    return queryset.select_related("owner").order_by("-edited_time")
 
 
 @api.get(
@@ -563,7 +645,12 @@ def list_item_collections(request, item_uuid: str):
     if not item or item.is_deleted:
         raise Http404("Item not found")
     qv = q_piece_visible_to_user(request.user)
-    return Collection.objects.filter(items=item).filter(qv).order_by("-created_time")
+    return (
+        Collection.objects.filter(items=item)
+        .filter(qv)
+        .select_related("owner")
+        .order_by("-created_time")
+    )
 
 
 @api.post(
@@ -612,11 +699,12 @@ def list_featured_collections(request):
     List featured collections for current user.
     """
     collections = list(
-        Collection.objects.filter(featured_by=request.user.identity).filter(
-            q_piece_visible_to_user(request.user)
-        )
+        Collection.objects.filter(featured_by=request.user.identity)
+        .filter(q_piece_visible_to_user(request.user))
+        .select_related("owner")
     )
     Collection.attach_item_count_by_category(collections)
+    _prefetch_collection_owners(collections)
     return collections
 
 
@@ -705,7 +793,7 @@ def trending_collection(request):
     # made them non-public after the discover job cached them
     qs = Collection.objects.filter(
         pk__in=collection_ids, visibility=0, owner__anonymous_viewable=True
-    )
+    ).select_related("owner")
     if restricted_owner_ids:
         qs = qs.exclude(owner_id__in=restricted_owner_ids)
     # pk__in does not preserve list order; reapply the rotation
@@ -713,4 +801,5 @@ def trending_collection(request):
     collections = [by_pk[pk] for pk in collection_ids if pk in by_pk]
     prefetch_latest_posts(collections)
     Collection.attach_item_count_by_category(collections)
+    _prefetch_collection_owners(collections)
     return collections
