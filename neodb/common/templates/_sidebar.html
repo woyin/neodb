@@ -168,12 +168,24 @@
           <div class="shelf">
             <ul class="cards">
               {% for item in books_in_progress %}
-                <li class="card">
+                <li class="card progress-card">
                   <a href="{{ item.url }}" title="{{ item.display_title }}">
                     <img src="{{ item.cover|thumb:'normal' }}"
                          alt="{{ item.display_title }}"
                          loading="lazy">
                     <div class="card-title">{{ item.display_title }}</div>
+                  </a>
+                  <a href="#"
+                     class="progress-badge"
+                     hx-get="{% url 'journal:note' item.uuid %}?mode=progress"
+                     hx-target="body"
+                     hx-swap="beforeend"
+                     title="{% if item.reading_progress %}{{ item.reading_progress }}{% else %}{% trans 'Set progress' %}{% endif %}">
+                    {% if item.reading_progress_short %}
+                      {{ item.reading_progress_short }}
+                    {% else %}
+                      <i class="fa-solid fa-percent"></i>
+                    {% endif %}
                   </a>
                 </li>
               {% endfor %}
