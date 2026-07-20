@@ -45,8 +45,10 @@ def count(
 
 
 def record_activity(action: str, source: str) -> None:
-    """Emit a `user.activity` counter for a user-initiated content action.
+    """Emit a `user.activity` counter for a user-initiated action.
 
-    ``source`` is ``"api"`` or ``"web"``; importers should not call this.
+    ``source`` is ``"api"`` or ``"web"``. Call this at the view/API layer;
+    importer/exporter per-item processing should not call it (the import or
+    export *start* is recorded by the triggering view instead).
     """
     count("user.activity", attributes={"action": action, "source": source})
