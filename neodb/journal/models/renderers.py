@@ -41,15 +41,24 @@ def render_md(s: str) -> str:
     return cast(str, _markdown(s))
 
 
-_RE_MD_IMAGE = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)")
+# Public: the NDJSON exporter/importer and the image migration command all
+# need to agree with the renderer on what counts as an inline image, so they
+# share this pattern instead of keeping their own copies. Group 1 is the alt
+# text, group 2 the src.
+RE_MD_IMAGE = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)")
 
 
-def _normalize_image_src(src: str) -> str | None:
+def normalize_image_src(src: str) -> str | None:
     """Normalize an image src. Return normalized src or None if invalid.
 
     Convert to full URL for checking. If on our server or media host,
     must be under MEDIA_URL prefix. External URLs are allowed as-is.
     Relative paths are always invalid.
+
+    Public because the NDJSON exporter needs the same "is this our own
+    media?" decision: an absolute URL on our site normalizes to a
+    MEDIA_URL-prefixed one, which is what tells it to copy the file out of
+    storage instead of fetching it back over HTTP.
     """
     parsed = urlparse(src)
     media_parsed = urlparse(settings.MEDIA_URL)
@@ -89,12 +98,12 @@ def sanitize_md_images(md_text: str) -> str:
     def _replace(m: re.Match[str]) -> str:
         alt = m.group(1)
         src = m.group(2).strip()
-        normalized = _normalize_image_src(src)
+        normalized = normalize_image_src(src)
         if normalized is not None:
             return f"![{alt}]({normalized})"
         return f"==[invalid image: {src}]=="
 
-    return _RE_MD_IMAGE.sub(_replace, md_text)
+    return RE_MD_IMAGE.sub(_replace, md_text)
 
 
 _RE_HTML_TAG = re.compile(r"<[^>]*>")
