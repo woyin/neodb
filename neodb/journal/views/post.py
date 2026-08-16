@@ -99,6 +99,11 @@ def post_delete(request: AuthedHttpRequest, post_id: int):
     if p.author_id != request.user.identity.pk:
         raise PermissionDenied(_("Insufficient permission"))
     Takahe.delete_posts([post_id])
+    # Takahe.delete_posts() only flips the post state; run the same
+    # cleanup the Mastodon API path gets via PostService.delete(), so
+    # linked pieces and the post's index doc do not outlive the post
+    # (the delete button even promises the piece cleanup)
+    cleanup_deleted_post(post_id)
     return HttpResponse("<!-- DELETED -->")
 
 
