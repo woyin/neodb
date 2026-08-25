@@ -6,8 +6,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"Report-Msgid-Bugs-To: dev@neodb.social.NOSPAM\n"
-"POT-Creation-Date: 2026-08-08 15:44-0400\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-08-22 22:51-0400\n"
 "PO-Revision-Date: 2026-08-09 06:32+0000\n"
 "Last-Translator: Anonymous <noreply@weblate.org>\n"
 "Language-Team: Portuguese <https://hosted.weblate.org/projects/neodb/neodb/"
@@ -524,7 +524,7 @@ msgstr ""
 msgid "Edition"
 msgstr "Edições"
 
-#: catalog/models/common.py:157 catalog/templates/_sidebar_edit.html:285
+#: catalog/models/common.py:157 catalog/templates/_sidebar_edit.html:286
 msgid "Work"
 msgstr "Obra"
 
@@ -534,7 +534,7 @@ msgstr "Obra"
 msgid "TV Series"
 msgstr "séries"
 
-#: catalog/models/common.py:159 catalog/templates/_sidebar_edit.html:206
+#: catalog/models/common.py:159 catalog/templates/_sidebar_edit.html:207
 msgid "TV Season"
 msgstr "Temporada"
 
@@ -543,7 +543,7 @@ msgid "TV Episode"
 msgstr "Episódio TV"
 
 #: catalog/models/common.py:161 catalog/models/common.py:177
-#: catalog/models/common.py:191 catalog/templates/_sidebar_edit.html:199
+#: catalog/models/common.py:191 catalog/templates/_sidebar_edit.html:200
 #: journal/templates/_sidebar_user_mark_list.html:35
 #: journal/templates/_sidebar_user_tag_filter.html:27
 msgid "Movie"
@@ -615,7 +615,7 @@ msgid "Music"
 msgstr "Música"
 
 #: catalog/models/common.py:181 catalog/models/common.py:195
-#: catalog/templates/_sidebar_edit.html:218 common/templates/_header.html:35
+#: catalog/templates/_sidebar_edit.html:219 common/templates/_header.html:35
 #: journal/templates/_sidebar_user_mark_list.html:42
 #: journal/templates/_sidebar_user_tag_filter.html:33
 msgid "Podcast"
@@ -857,12 +857,12 @@ msgid "character name"
 msgstr ""
 
 #: catalog/models/item.py:288 catalog/models/item.py:320
-#: journal/models/collection.py:93
+#: journal/models/collection.py:96
 msgid "title"
 msgstr "título"
 
 #: catalog/models/item.py:289 catalog/models/item.py:328
-#: journal/models/collection.py:94
+#: journal/models/collection.py:97
 msgid "description"
 msgstr "descrição"
 
@@ -1327,7 +1327,7 @@ msgstr "Sincronização em progresso."
 #: catalog/templates/catalog_edit.html:12
 #: journal/templates/action_edit_post.html:6
 #: journal/templates/action_edit_post.html:8 journal/templates/article.html:196
-#: journal/templates/collection.html:179 journal/templates/collection.html:187
+#: journal/templates/collection.html:185 journal/templates/collection.html:193
 #: journal/templates/collection_edit.html:10
 #: journal/templates/collection_edit.html:26
 #: journal/templates/post_compose.html:16 journal/templates/tag_edit.html:16
@@ -1376,15 +1376,15 @@ msgid "Edit Options"
 msgstr "Editar Opções"
 
 #: catalog/templates/_sidebar_edit.html:28 catalog/templates/item_base.html:178
-#: catalog/views/edit.py:81 catalog/views/edit.py:141 catalog/views/edit.py:194
-#: catalog/views/edit.py:214 catalog/views/edit.py:252
-#: catalog/views/edit.py:318 catalog/views/edit.py:322
-#: catalog/views/edit.py:340 catalog/views/edit.py:387
-#: catalog/views/edit.py:411 catalog/views/edit.py:426
-#: catalog/views/edit.py:464 catalog/views/edit.py:474
-#: catalog/views/edit.py:500 catalog/views/edit.py:563
-#: catalog/views/edit.py:617 catalog/views/edit.py:638
-#: catalog/views/search.py:365
+#: catalog/views/edit.py:82 catalog/views/edit.py:143 catalog/views/edit.py:197
+#: catalog/views/edit.py:218 catalog/views/edit.py:259
+#: catalog/views/edit.py:328 catalog/views/edit.py:332
+#: catalog/views/edit.py:351 catalog/views/edit.py:400
+#: catalog/views/edit.py:425 catalog/views/edit.py:440
+#: catalog/views/edit.py:480 catalog/views/edit.py:490
+#: catalog/views/edit.py:517 catalog/views/edit.py:582
+#: catalog/views/edit.py:637 catalog/views/edit.py:659
+#: catalog/views/search.py:367
 #, fuzzy
 #| msgid "Edit this item"
 msgid "Editing this item is restricted."
@@ -1461,17 +1461,18 @@ msgid "Choose cover"
 msgstr "Descobrir"
 
 #: catalog/templates/_sidebar_edit.html:119
-#: catalog/templates/_sidebar_edit.html:121
+#: catalog/templates/_sidebar_edit.html:120
+#: catalog/templates/_sidebar_edit.html:122
 #, fuzzy
 #| msgid "Current Targets"
 msgid "Current cover"
 msgstr "Objetivos atuais"
 
-#: catalog/templates/_sidebar_edit.html:138
+#: catalog/templates/_sidebar_edit.html:139
 msgid "Select an image to use as the cover of this item."
 msgstr ""
 
-#: catalog/templates/_sidebar_edit.html:139
+#: catalog/templates/_sidebar_edit.html:140
 #: catalog/templates/catalog_edit.html:65
 #: common/templates/manage/settings.html:136
 #: journal/templates/add_to_collection.html:43
@@ -1486,23 +1487,23 @@ msgstr ""
 msgid "Save"
 msgstr "Guardar"
 
-#: catalog/templates/_sidebar_edit.html:146
+#: catalog/templates/_sidebar_edit.html:147
 msgid "Edit sub-items"
 msgstr "Editar sub-itens"
 
-#: catalog/templates/_sidebar_edit.html:159
+#: catalog/templates/_sidebar_edit.html:160
 msgid "create"
 msgstr "criar"
 
-#: catalog/templates/_sidebar_edit.html:165
+#: catalog/templates/_sidebar_edit.html:166
 msgid "Fetch all episodes"
 msgstr "Obter todos os episódios"
 
-#: catalog/templates/_sidebar_edit.html:170
+#: catalog/templates/_sidebar_edit.html:171
 msgid "Fetch all"
 msgstr "Obter tudo"
 
-#: catalog/templates/_sidebar_edit.html:171
+#: catalog/templates/_sidebar_edit.html:172
 msgid ""
 "Due to differences in how Douban, IMDB, and TMDB handle season data, a small "
 "number of TV shows and animations may not return correct results. Please "
@@ -1513,11 +1514,11 @@ msgstr ""
 "podem não apresentar resultados corretos. Verifique manualmente e "
 "reconfigure após a sua atualização."
 
-#: catalog/templates/_sidebar_edit.html:172
+#: catalog/templates/_sidebar_edit.html:173
 msgid "Up to 250 episodes will be fetched for a season."
 msgstr ""
 
-#: catalog/templates/_sidebar_edit.html:175
+#: catalog/templates/_sidebar_edit.html:176
 msgid ""
 "To fetch all episodes, season numbers and IMDB information are required. If "
 "filling this out is inconvenient, you can also manually create sub-entries."
@@ -1526,65 +1527,65 @@ msgstr ""
 "são necessários. Se preencher isto é inconveniente, também pode criar sub-"
 "entradas manualmente."
 
-#: catalog/templates/_sidebar_edit.html:181
-#: catalog/templates/_sidebar_edit.html:193
-#: catalog/templates/_sidebar_edit.html:212
+#: catalog/templates/_sidebar_edit.html:182
+#: catalog/templates/_sidebar_edit.html:194
+#: catalog/templates/_sidebar_edit.html:213
 msgid "switch category"
 msgstr "trocar categoria"
 
-#: catalog/templates/_sidebar_edit.html:184
+#: catalog/templates/_sidebar_edit.html:185
 msgid "Switching may remove some metadata. Sure to proceed?"
 msgstr ""
 "A troca pode remover alguns metadados. Tem certeza que deseja prosseguir?"
 
-#: catalog/templates/_sidebar_edit.html:187
+#: catalog/templates/_sidebar_edit.html:188
 msgid "TV Show"
 msgstr "Programa de TV"
 
-#: catalog/templates/_sidebar_edit.html:226
+#: catalog/templates/_sidebar_edit.html:227
 msgid "Link to parent item"
 msgstr "Ligação para o elemento pai"
 
-#: catalog/templates/_sidebar_edit.html:229
+#: catalog/templates/_sidebar_edit.html:230
 msgid "Sure to link?"
 msgstr "Criar ligação?"
 
-#: catalog/templates/_sidebar_edit.html:236
+#: catalog/templates/_sidebar_edit.html:237
 msgid "Update link"
 msgstr "Atualizar ligação"
 
-#: catalog/templates/_sidebar_edit.html:242
+#: catalog/templates/_sidebar_edit.html:243
 msgid "Cleanup seasons"
 msgstr "Limpar temporadas"
 
-#: catalog/templates/_sidebar_edit.html:245
+#: catalog/templates/_sidebar_edit.html:246
 #: catalog/templates/catalog_delete.html:45
 msgid "This operation cannot be undone. Sure to delete?"
 msgstr "Esta operação não pode ser revertida. Tem a certeza que quer apagar?"
 
-#: catalog/templates/_sidebar_edit.html:249
+#: catalog/templates/_sidebar_edit.html:250
 msgid "remove seasons not marked"
 msgstr "remover temporadas não marcadas"
 
-#: catalog/templates/_sidebar_edit.html:255
+#: catalog/templates/_sidebar_edit.html:256
 #: catalog/templates/catalog_merge.html:12
 msgid "Merge"
 msgstr "Mesclar"
 
-#: catalog/templates/_sidebar_edit.html:261
+#: catalog/templates/_sidebar_edit.html:262
 msgid "URL of target item, or empty if undo merge"
 msgstr "URL do elemento de destino, ou vazio, se a mesclagem for desfeita"
 
-#: catalog/templates/_sidebar_edit.html:267
-#: catalog/templates/_sidebar_edit.html:347
+#: catalog/templates/_sidebar_edit.html:268
+#: catalog/templates/_sidebar_edit.html:348
 msgid "merge to another item"
 msgstr "mesclar a outro elemento"
 
-#: catalog/templates/_sidebar_edit.html:272
-#: catalog/templates/_sidebar_edit.html:276
+#: catalog/templates/_sidebar_edit.html:273
+#: catalog/templates/_sidebar_edit.html:277
 #: catalog/templates/catalog_delete.html:12
 #: journal/templates/action_delete_post.html:10
-#: journal/templates/article.html:199 journal/templates/collection.html:182
+#: journal/templates/article.html:199 journal/templates/collection.html:188
 #: journal/templates/mark.html:149 journal/templates/note.html:82
 #: journal/templates/piece_delete.html:10
 #: journal/templates/piece_delete.html:34
@@ -1592,78 +1593,78 @@ msgstr "mesclar a outro elemento"
 msgid "Delete"
 msgstr "Apagar"
 
-#: catalog/templates/_sidebar_edit.html:286
+#: catalog/templates/_sidebar_edit.html:287
 msgid "This edition belongs to the following work"
 msgstr "Esta edição pertence à seguinte obra"
 
-#: catalog/templates/_sidebar_edit.html:291
+#: catalog/templates/_sidebar_edit.html:292
 msgid "Sure to unlink?"
 msgstr "Tem certeza que deseja desvincular?"
 
-#: catalog/templates/_sidebar_edit.html:297
+#: catalog/templates/_sidebar_edit.html:298
 msgid "Unlink from work"
 msgstr "Desvincular do trabalho"
 
-#: catalog/templates/_sidebar_edit.html:303
+#: catalog/templates/_sidebar_edit.html:304
 msgid "Link"
 msgstr "Ligação"
 
-#: catalog/templates/_sidebar_edit.html:314
+#: catalog/templates/_sidebar_edit.html:315
 msgid "Link to another edition from same work"
 msgstr "Ligação para outra edição do mesmo trabalho"
 
-#: catalog/templates/_sidebar_edit.html:323
+#: catalog/templates/_sidebar_edit.html:324
 #, fuzzy
 #| msgid "description"
 msgid "Restriction"
 msgstr "descrição"
 
-#: catalog/templates/_sidebar_edit.html:336
+#: catalog/templates/_sidebar_edit.html:337
 #: journal/templates/collection_update_item_note.html:4
 msgid "Update"
 msgstr "Atualizar"
 
-#: catalog/templates/_sidebar_edit.html:341
+#: catalog/templates/_sidebar_edit.html:342
 msgid "Suggest Edits"
 msgstr "Sugerir alterações"
 
-#: catalog/templates/_sidebar_edit.html:346
+#: catalog/templates/_sidebar_edit.html:347
 msgid "proposed action"
 msgstr "ação proposta"
 
-#: catalog/templates/_sidebar_edit.html:348
+#: catalog/templates/_sidebar_edit.html:349
 msgid "link to another item"
 msgstr "ligação para outro elemento"
 
-#: catalog/templates/_sidebar_edit.html:349
+#: catalog/templates/_sidebar_edit.html:350
 msgid "change item category"
 msgstr "alterar categoria do item"
 
-#: catalog/templates/_sidebar_edit.html:350
+#: catalog/templates/_sidebar_edit.html:351
 msgid "change item metadata"
 msgstr "alterar metadados do artigo"
 
-#: catalog/templates/_sidebar_edit.html:351
+#: catalog/templates/_sidebar_edit.html:352
 msgid "remove item"
 msgstr "remover item"
 
-#: catalog/templates/_sidebar_edit.html:352
+#: catalog/templates/_sidebar_edit.html:353
 msgid "other"
 msgstr "outro"
 
-#: catalog/templates/_sidebar_edit.html:356
+#: catalog/templates/_sidebar_edit.html:357
 msgid ""
 "To suggest merging or association, please include the URL of the target item"
 msgstr ""
 "Para propor uma fusão ou associação, por favor, inclua o URL do elemento em "
 "questão"
 
-#: catalog/templates/_sidebar_edit.html:357
+#: catalog/templates/_sidebar_edit.html:358
 #: catalog/templates/catalog_verify.html:116
 msgid "submit"
 msgstr "submeter"
 
-#: catalog/templates/_sidebar_edit.html:358
+#: catalog/templates/_sidebar_edit.html:359
 msgid ""
 "As a user of this community, you may edit some metadata of items on this "
 "site. If you are unsure whether your edits are appropriate or are unable to "
@@ -2219,13 +2220,13 @@ msgid "number of Episodes"
 msgstr "número de Episódios"
 
 #: catalog/templates/people.html:13 common/templates/_sidebar.html:77
-#: common/templates/_sidebar.html:84 journal/models/shelf.py:325
+#: common/templates/_sidebar.html:84 journal/models/shelf.py:326
 #, fuzzy
 #| msgid "following you"
 msgid "following"
 msgstr "segue-o"
 
-#: catalog/templates/people.html:15 journal/models/shelf.py:323
+#: catalog/templates/people.html:15 journal/models/shelf.py:324
 #: social/templates/notification.html:60
 msgid "follow"
 msgstr "seguir"
@@ -2241,6 +2242,8 @@ msgstr ""
 #: catalog/templates/people_works.html:57
 #: catalog/templates/search_header.html:13
 #: catalog/templates/search_header.html:15
+#: journal/templates/_sidebar_collection_filter.html:14
+#: journal/templates/_sidebar_collection_filter.html:28
 #: journal/templates/_sidebar_user_mark_list.html:56
 #: social/templates/feed.html:42 social/templates/feed.html:44
 #: social/templates/notification.html:56
@@ -2248,16 +2251,19 @@ msgid "all"
 msgstr "tudo"
 
 #: catalog/templates/people_works.html:59
+#: journal/templates/_sidebar_collection_filter.html:29
 msgid "wishlist"
 msgstr ""
 
 #: catalog/templates/people_works.html:61
+#: journal/templates/_sidebar_collection_filter.html:30
 #, fuzzy
 #| msgid "Sync in progress."
 msgid "in progress"
 msgstr "Sincronização em progresso."
 
 #: catalog/templates/people_works.html:63
+#: journal/templates/_sidebar_collection_filter.html:31
 #, fuzzy
 #| msgid "Complete"
 msgid "complete"
@@ -2399,135 +2405,135 @@ msgstr ""
 msgid "Editions"
 msgstr "Edições"
 
-#: catalog/views/edit.py:199 catalog/views/edit.py:202
-#: catalog/views/edit.py:298 catalog/views/edit.py:301
-#: catalog/views/verify.py:194 journal/views/collection.py:75
-#: journal/views/collection.py:100 journal/views/collection.py:514
-#: journal/views/collection.py:609 journal/views/common.py:193
-#: journal/views/mark.py:196 journal/views/post.py:112
-#: journal/views/post.py:114 journal/views/post.py:161
-#: journal/views/post.py:180 journal/views/post.py:182
-#: journal/views/post.py:223 journal/views/post.py:236
-#: journal/views/review.py:142 journal/views/review.py:146
-#: users/views/actions.py:171
+#: catalog/views/edit.py:202 catalog/views/edit.py:205
+#: catalog/views/edit.py:306 catalog/views/edit.py:309
+#: catalog/views/verify.py:197 journal/views/collection.py:77
+#: journal/views/collection.py:102 journal/views/collection.py:556
+#: journal/views/collection.py:651 journal/views/common.py:221
+#: journal/views/mark.py:196 journal/views/post.py:117
+#: journal/views/post.py:119 journal/views/post.py:166
+#: journal/views/post.py:185 journal/views/post.py:187
+#: journal/views/post.py:228 journal/views/post.py:241
+#: journal/views/review.py:154 journal/views/review.py:158
+#: users/views/actions.py:179
 msgid "Invalid parameter"
 msgstr "Parâmetro inválido"
 
-#: catalog/views/edit.py:216
+#: catalog/views/edit.py:220
 msgid "Item in use."
 msgstr "Item em uso."
 
-#: catalog/views/edit.py:218
+#: catalog/views/edit.py:222
 msgid "Item cannot be deleted."
 msgstr "Este item não pode ser apagado."
 
-#: catalog/views/edit.py:241 catalog/views/edit.py:295
-#: catalog/views/edit.py:413 catalog/views/edit.py:502
-#: catalog/views/edit.py:534 catalog/views/verify.py:156
-#: catalog/views/verify.py:203 journal/views/article.py:39
-#: journal/views/article.py:122 journal/views/article.py:142
-#: journal/views/collection.py:238 journal/views/collection.py:299
-#: journal/views/collection.py:318 journal/views/collection.py:342
-#: journal/views/collection.py:415 journal/views/collection.py:458
-#: journal/views/collection.py:497 journal/views/collection.py:509
-#: journal/views/collection.py:534 journal/views/collection.py:571
-#: journal/views/common.py:272 journal/views/mark.py:281
+#: catalog/views/edit.py:247 catalog/views/edit.py:303
+#: catalog/views/edit.py:427 catalog/views/edit.py:519
+#: catalog/views/edit.py:552 catalog/views/verify.py:158
+#: catalog/views/verify.py:206 journal/views/article.py:44
+#: journal/views/article.py:133 journal/views/article.py:153
+#: journal/views/collection.py:248 journal/views/collection.py:341
+#: journal/views/collection.py:360 journal/views/collection.py:384
+#: journal/views/collection.py:457 journal/views/collection.py:500
+#: journal/views/collection.py:539 journal/views/collection.py:551
+#: journal/views/collection.py:576 journal/views/collection.py:613
+#: journal/views/common.py:300 journal/views/mark.py:281
 #: journal/views/post.py:58 journal/views/post.py:78 journal/views/post.py:100
-#: journal/views/post.py:165 journal/views/post.py:194
-#: journal/views/post.py:267 journal/views/post.py:282
-#: journal/views/post.py:389 journal/views/post.py:544
-#: journal/views/review.py:52 journal/views/review.py:69
-#: journal/views/review.py:94
+#: journal/views/post.py:170 journal/views/post.py:199
+#: journal/views/post.py:272 journal/views/post.py:287
+#: journal/views/post.py:394 journal/views/post.py:549
+#: journal/views/review.py:64 journal/views/review.py:81
+#: journal/views/review.py:106
 msgid "Insufficient permission"
 msgstr "Permissões insuficientes"
 
-#: catalog/views/edit.py:362
+#: catalog/views/edit.py:374
 msgid "TV Season with IMDB id and season number required."
 msgstr "Temporada de TV com ID do IMDB e número de temporada necessária."
 
-#: catalog/views/edit.py:367
+#: catalog/views/edit.py:380
 msgid "Updating episodes"
 msgstr "A atualizar episódios"
 
-#: catalog/views/edit.py:392
+#: catalog/views/edit.py:405
 msgid "This person has no supported source to fetch works from."
 msgstr ""
 
-#: catalog/views/edit.py:398
+#: catalog/views/edit.py:412
 msgid "Already pulling works for this person, try again later."
 msgstr ""
 
-#: catalog/views/edit.py:402
+#: catalog/views/edit.py:416
 msgid "Pulling works in background."
 msgstr ""
 
-#: catalog/views/edit.py:424
+#: catalog/views/edit.py:438
 msgid "Cannot be merged to an item already deleted or merged"
 msgstr "Não pode ser mesclado com um elemento já apagado ou mesclado"
 
-#: catalog/views/edit.py:429
+#: catalog/views/edit.py:443
 msgid "Cannot merge items in different categories"
 msgstr "Não é possível mesclar elementos em categorias diferentes"
 
-#: catalog/views/edit.py:433
+#: catalog/views/edit.py:447
 #, fuzzy
 #| msgid "Cannot merge items in different categories"
 msgid "Cannot merge an item to itself"
 msgstr "Não é possível mesclar elementos em categorias diferentes"
 
-#: catalog/views/edit.py:472
+#: catalog/views/edit.py:488
 msgid "Cannot be linked to an item already deleted or merged"
 msgstr "Não pode ser vinculado a um elemento já apagado ou mesclado"
 
-#: catalog/views/edit.py:476
+#: catalog/views/edit.py:492
 msgid "Cannot link items other than editions"
 msgstr "Não é possível vincular elementos que não sejam edições"
 
-#: catalog/views/search.py:94
+#: catalog/views/search.py:96
 msgid "the internet"
 msgstr ""
 
-#: catalog/views/search.py:357
+#: catalog/views/search.py:359
 msgid "Invalid URL"
 msgstr "URL inválido"
 
-#: catalog/views/search.py:360
+#: catalog/views/search.py:362
 #, fuzzy
 #| msgid "Unsupported item type."
 msgid "Unsupported URL"
 msgstr "Tipo de item não suportado."
 
-#: catalog/views/verify.py:41
+#: catalog/views/verify.py:42
 msgid "Creator verification is only available for podcasts for now."
 msgstr ""
 
-#: catalog/views/verify.py:108
+#: catalog/views/verify.py:110
 msgid "No feed url available for this item."
 msgstr ""
 
-#: catalog/views/verify.py:119
+#: catalog/views/verify.py:121
 msgid "You are already a verified creator."
 msgstr ""
 
-#: catalog/views/verify.py:129
+#: catalog/views/verify.py:131
 msgid "Verification is already in progress."
 msgstr ""
 
-#: catalog/views/verify.py:137
+#: catalog/views/verify.py:139
 msgid "Please wait a moment before trying again."
 msgstr ""
 
-#: catalog/views/verify.py:162 common/utils.py:109 common/utils.py:150
-#: journal/views/article.py:175 journal/views/review.py:170
-#: users/views/actions.py:37 users/views/actions.py:123
+#: catalog/views/verify.py:164 common/utils.py:109 common/utils.py:150
+#: journal/views/article.py:186 journal/views/review.py:182
+#: users/views/actions.py:45 users/views/actions.py:131
 msgid "User not found"
 msgstr "Utilizador não encontrado"
 
-#: catalog/views/verify.py:183
+#: catalog/views/verify.py:186
 msgid "Creator verified."
 msgstr ""
 
-#: catalog/views/verify.py:213
+#: catalog/views/verify.py:217
 #, fuzzy
 #| msgid "Send verification code"
 msgid "Creator verification removed."
@@ -4327,8 +4333,8 @@ msgstr ""
 "discord.gg/uprvcH8gqD\">Discord</a>.\n"
 "        </p>\n"
 "        <p>\n"
-"          <i class=\"fa-solid fa-door-open\"></i> &nbsp; <a href=\"%"
-"(login_url)s\">Clique aqui</a> para se registar ou iniciar sessão.\n"
+"          <i class=\"fa-solid fa-door-open\"></i> &nbsp; <a "
+"href=\"%(login_url)s\">Clique aqui</a> para se registar ou iniciar sessão.\n"
 "        </p>\n"
 "        "
 
@@ -4514,7 +4520,7 @@ msgstr "Você"
 msgid "unavailable"
 msgstr "indisponível"
 
-#: common/utils.py:113 common/utils.py:154 users/views/actions.py:126
+#: common/utils.py:113 common/utils.py:154 users/views/actions.py:134
 msgid "User no longer exists"
 msgstr "Este utilizador já não existe"
 
@@ -4523,8 +4529,8 @@ msgstr "Este utilizador já não existe"
 msgid "Access denied"
 msgstr "Acesso negado"
 
-#: common/utils.py:128 common/utils.py:130 journal/views/article.py:193
-#: journal/views/profile.py:540 journal/views/review.py:188
+#: common/utils.py:128 common/utils.py:130 journal/views/article.py:204
+#: journal/views/profile.py:540 journal/views/review.py:200
 msgid "Login required"
 msgstr "Requer iniciar sessão"
 
@@ -5399,7 +5405,7 @@ msgstr "Ao gravar, substituir espaços iniciais por espaços de largura total"
 #: users/templates/users/data.html:45 users/templates/users/data.html:98
 #: users/templates/users/data.html:155 users/templates/users/data.html:206
 #: users/templates/users/data.html:269 users/templates/users/data.html:328
-#: users/templates/users/rym_import.html:81
+#: users/templates/users/data.html:525 users/templates/users/rym_import.html:81
 #: users/templates/users/steam_import.html:125
 #: users/templates/users/storygraph_import.html:81
 msgid "Visibility"
@@ -5437,8 +5443,8 @@ msgstr "só o criador"
 msgid "owner and their local mutuals"
 msgstr ""
 
-#: journal/forms.py:169 journal/templates/collection.html:187
-#: journal/templates/collection.html:196
+#: journal/forms.py:169 journal/templates/collection.html:193
+#: journal/templates/collection.html:202
 msgid "Collaborative editing"
 msgstr "Editar em grupo/colaboração"
 
@@ -5494,11 +5500,11 @@ msgid ""
 "Import complete: {imported} imported, {skipped} skipped, {failed} failed"
 msgstr ""
 
-#: journal/models/article.py:212 journal/views/article.py:207
+#: journal/models/article.py:212 journal/views/article.py:218
 msgid "(may contain sensitive content)"
 msgstr ""
 
-#: journal/models/collection.py:41 journal/templates/add_to_collection.html:39
+#: journal/models/collection.py:44 journal/templates/add_to_collection.html:39
 #: journal/templates/collection_edit.html:64
 #: journal/templates/collection_share.html:63
 #: journal/templates/collection_update_item_note.html:3
@@ -5506,62 +5512,62 @@ msgstr ""
 msgid "note"
 msgstr "nota"
 
-#: journal/models/collection.py:108
+#: journal/models/collection.py:111
 #, fuzzy
 #| msgid "shared {username}'s collection"
 msgid "search query for dynamic collection"
 msgstr "partilhou a coleção de {username}"
 
-#: journal/models/collection.py:467 journal/templatetags/collection.py:35
+#: journal/models/collection.py:524 journal/templatetags/collection.py:35
 #, python-format
 msgid "%(count)d book"
 msgid_plural "%(count)d books"
 msgstr[0] "%(count)d livro"
 msgstr[1] "%(count)d livros"
 
-#: journal/models/collection.py:472 journal/templatetags/collection.py:43
+#: journal/models/collection.py:529 journal/templatetags/collection.py:43
 #, python-format
 msgid "%(count)d movie"
 msgid_plural "%(count)d movies"
 msgstr[0] "%(count)d filme"
 msgstr[1] "%(count)d filmes"
 
-#: journal/models/collection.py:477 journal/templatetags/collection.py:51
+#: journal/models/collection.py:534 journal/templatetags/collection.py:51
 #, python-format
 msgid "%(count)d tv show"
 msgid_plural "%(count)d tv shows"
 msgstr[0] "%(count)d programa de tv"
 msgstr[1] "%(count)d programas de tv"
 
-#: journal/models/collection.py:482 journal/templatetags/collection.py:59
+#: journal/models/collection.py:539 journal/templatetags/collection.py:59
 #, python-format
 msgid "%(count)d album"
 msgid_plural "%(count)d albums"
 msgstr[0] "%(count)d álbum"
 msgstr[1] "%(count)d álbuns"
 
-#: journal/models/collection.py:487 journal/templatetags/collection.py:67
+#: journal/models/collection.py:544 journal/templatetags/collection.py:67
 #, python-format
 msgid "%(count)d game"
 msgid_plural "%(count)d games"
 msgstr[0] "%(count)d jogo"
 msgstr[1] "%(count)d jogos"
 
-#: journal/models/collection.py:492 journal/templatetags/collection.py:75
+#: journal/models/collection.py:549 journal/templatetags/collection.py:75
 #, python-format
 msgid "%(count)d podcast"
 msgid_plural "%(count)d podcasts"
 msgstr[0] "%(count)d podcast"
 msgstr[1] "%(count)d podcasts"
 
-#: journal/models/collection.py:498 journal/templatetags/collection.py:83
+#: journal/models/collection.py:555 journal/templatetags/collection.py:83
 #, python-format
 msgid "%(count)d performance"
 msgid_plural "%(count)d performances"
 msgstr[0] "%(count)d espetáculo"
 msgstr[1] "%(count)d espetáculos"
 
-#: journal/models/collection.py:506 journal/templatetags/collection.py:91
+#: journal/models/collection.py:563 journal/templatetags/collection.py:91
 #, python-format
 msgid "%(count)d item"
 msgid_plural "%(count)d items"
@@ -5574,7 +5580,7 @@ msgstr[1] "%(count)d artigos"
 #: journal/templates/wrapped_share.html:43 users/templates/users/data.html:54
 #: users/templates/users/data.html:107 users/templates/users/data.html:164
 #: users/templates/users/data.html:215 users/templates/users/data.html:277
-#: users/templates/users/data.html:337
+#: users/templates/users/data.html:337 users/templates/users/data.html:534
 #: users/templates/users/preferences.html:56
 #: users/templates/users/rym_import.html:84
 #: users/templates/users/steam_import.html:128
@@ -5588,7 +5594,7 @@ msgstr "Público"
 #: journal/templates/wrapped_share.html:49 users/templates/users/data.html:62
 #: users/templates/users/data.html:115 users/templates/users/data.html:172
 #: users/templates/users/data.html:223 users/templates/users/data.html:285
-#: users/templates/users/data.html:345
+#: users/templates/users/data.html:345 users/templates/users/data.html:542
 #: users/templates/users/preferences.html:63
 #: users/templates/users/rym_import.html:88
 #: users/templates/users/steam_import.html:132
@@ -5601,7 +5607,7 @@ msgstr "Apenas seguidores"
 #: journal/templates/wrapped_share.html:55 users/templates/users/data.html:70
 #: users/templates/users/data.html:123 users/templates/users/data.html:180
 #: users/templates/users/data.html:231 users/templates/users/data.html:293
-#: users/templates/users/data.html:353
+#: users/templates/users/data.html:353 users/templates/users/data.html:550
 #: users/templates/users/preferences.html:70
 #: users/templates/users/rym_import.html:92
 #: users/templates/users/steam_import.html:136
@@ -5609,7 +5615,7 @@ msgstr "Apenas seguidores"
 msgid "Mentioned Only"
 msgstr "Apenas mencionado"
 
-#: journal/models/common.py:730
+#: journal/models/common.py:790
 #, fuzzy
 #| msgid "A recent post was not posted to Mastodon, please re-authorize."
 msgid ""
@@ -5618,28 +5624,28 @@ msgid ""
 msgstr ""
 "Um post recente não foi publicado no Mastodon. Por favor, volte a autorizar."
 
-#: journal/models/common.py:927
+#: journal/models/common.py:987
 msgid "A recent post was not posted to Threads."
 msgstr "Um post recente não foi publicado no Threads."
 
-#: journal/models/common.py:960
+#: journal/models/common.py:1020
 #, fuzzy
 #| msgid "A recent post was not posted to Mastodon."
 msgid "A recent post was not boosted on Mastodon."
 msgstr "Um post recente não foi publicado no Mastodon."
 
-#: journal/models/common.py:970
+#: journal/models/common.py:1030
 #, fuzzy
 #| msgid "Item no longer exists"
 msgid "Original post no longer exists."
 msgstr "Este item já não existe"
 
-#: journal/models/common.py:984
+#: journal/models/common.py:1044
 msgid "A recent post was not posted to Mastodon, please re-authorize."
 msgstr ""
 "Um post recente não foi publicado no Mastodon. Por favor, volte a autorizar."
 
-#: journal/models/common.py:993
+#: journal/models/common.py:1053
 msgid "A recent post was not posted to Mastodon."
 msgstr "Um post recente não foi publicado no Mastodon."
 
@@ -5740,7 +5746,7 @@ msgstr "Faixa {value}"
 msgid "Cycle {value}"
 msgstr "Ciclo {value}"
 
-#: journal/models/renderers.py:199
+#: journal/models/renderers.py:208
 #, python-brace-format
 msgid "regarding {item_title}, may contain spoiler or triggering content"
 msgstr ""
@@ -5758,433 +5764,433 @@ msgstr "uma crítica de {item_title}"
 msgid "(may contain spoilers)"
 msgstr "Item contém sub-itens."
 
-#: journal/models/shelf.py:36
+#: journal/models/shelf.py:37
 msgid "WISHLIST"
 msgstr "LISTA DE DESEJOS"
 
-#: journal/models/shelf.py:37
+#: journal/models/shelf.py:38
 msgid "PROGRESS"
 msgstr "PROGRESSO"
 
-#: journal/models/shelf.py:38
+#: journal/models/shelf.py:39
 msgid "COMPLETE"
 msgstr "COMPLETO"
 
-#: journal/models/shelf.py:39
+#: journal/models/shelf.py:40
 msgid "DROPPED"
 msgstr "DEIXADO"
 
-#: journal/models/shelf.py:48
+#: journal/models/shelf.py:49
 msgid "books to read"
 msgstr "livros para ler"
 
-#: journal/models/shelf.py:49
+#: journal/models/shelf.py:50
 msgid "want to read"
 msgstr "quer ler"
 
-#: journal/models/shelf.py:50
+#: journal/models/shelf.py:51
 #, python-brace-format
 msgid "wants to read {item}"
 msgstr "quer ler {item}"
 
-#: journal/models/shelf.py:51
+#: journal/models/shelf.py:52
 msgid "to read"
 msgstr "para ler"
 
-#: journal/models/shelf.py:56
+#: journal/models/shelf.py:57
 msgid "books reading"
 msgstr "livros a ler"
 
-#: journal/models/shelf.py:57
+#: journal/models/shelf.py:58
 msgid "start reading"
 msgstr "começar a ler"
 
-#: journal/models/shelf.py:58
+#: journal/models/shelf.py:59
 #, python-brace-format
 msgid "started reading {item}"
 msgstr "começou a ler {item}"
 
-#: journal/models/shelf.py:59
+#: journal/models/shelf.py:60
 msgid "reading"
 msgstr "a ler"
 
-#: journal/models/shelf.py:64
+#: journal/models/shelf.py:65
 msgid "books completed"
 msgstr "livros concluídos"
 
-#: journal/models/shelf.py:65
+#: journal/models/shelf.py:66
 msgid "finish reading"
 msgstr "terminar de ler"
 
-#: journal/models/shelf.py:66
+#: journal/models/shelf.py:67
 #, python-brace-format
 msgid "finished reading {item}"
 msgstr "acabou de ler {item}"
 
-#: journal/models/shelf.py:67
+#: journal/models/shelf.py:68
 msgid "read"
 msgstr "ler"
 
-#: journal/models/shelf.py:72
+#: journal/models/shelf.py:73
 msgid "books dropped"
 msgstr "livros deixados"
 
-#: journal/models/shelf.py:73
+#: journal/models/shelf.py:74
 msgid "stop reading"
 msgstr "parar de ler"
 
-#: journal/models/shelf.py:74
+#: journal/models/shelf.py:75
 #, python-brace-format
 msgid "stopped reading {item}"
 msgstr "parou de ler {item}"
 
-#: journal/models/shelf.py:75
+#: journal/models/shelf.py:76
 msgid "stopped reading"
 msgstr "parou de ler"
 
-#: journal/models/shelf.py:80
+#: journal/models/shelf.py:81
 msgid "books reviewed"
 msgstr "livros resenhados"
-
-#: journal/models/shelf.py:81 journal/models/shelf.py:121
-#: journal/models/shelf.py:161 journal/models/shelf.py:201
-#: journal/models/shelf.py:241 journal/models/shelf.py:281
-#: journal/models/shelf.py:315
-msgid "review"
-msgstr "crítica"
 
 #: journal/models/shelf.py:82 journal/models/shelf.py:122
 #: journal/models/shelf.py:162 journal/models/shelf.py:202
 #: journal/models/shelf.py:242 journal/models/shelf.py:282
 #: journal/models/shelf.py:316
+msgid "review"
+msgstr "crítica"
+
+#: journal/models/shelf.py:83 journal/models/shelf.py:123
+#: journal/models/shelf.py:163 journal/models/shelf.py:203
+#: journal/models/shelf.py:243 journal/models/shelf.py:283
+#: journal/models/shelf.py:317
 #, python-brace-format
 msgid "wrote a review of {item}"
 msgstr "escreveu uma resenha sobre {item}"
 
-#: journal/models/shelf.py:88
+#: journal/models/shelf.py:89
 msgid "movies to watch"
 msgstr "filmes para ver"
 
-#: journal/models/shelf.py:89 journal/models/shelf.py:129
+#: journal/models/shelf.py:90 journal/models/shelf.py:130
 msgid "want to watch"
 msgstr "quero ver"
 
-#: journal/models/shelf.py:90 journal/models/shelf.py:130
+#: journal/models/shelf.py:91 journal/models/shelf.py:131
 #, python-brace-format
 msgid "wants to watch {item}"
 msgstr "quer ver {item}"
 
-#: journal/models/shelf.py:91 journal/models/shelf.py:131
+#: journal/models/shelf.py:92 journal/models/shelf.py:132
 msgid "to watch"
 msgstr "para ver"
 
-#: journal/models/shelf.py:96
+#: journal/models/shelf.py:97
 msgid "movies watching"
 msgstr "filmes a ver"
 
-#: journal/models/shelf.py:97 journal/models/shelf.py:137
+#: journal/models/shelf.py:98 journal/models/shelf.py:138
 msgid "start watching"
 msgstr "começar a ver"
 
-#: journal/models/shelf.py:98 journal/models/shelf.py:138
+#: journal/models/shelf.py:99 journal/models/shelf.py:139
 #, python-brace-format
 msgid "started watching {item}"
 msgstr "começou a ver {item}"
 
-#: journal/models/shelf.py:99 journal/models/shelf.py:139
+#: journal/models/shelf.py:100 journal/models/shelf.py:140
 msgid "watching"
 msgstr "a ver"
 
-#: journal/models/shelf.py:104
+#: journal/models/shelf.py:105
 msgid "movies watched"
 msgstr "filmes vistos"
 
-#: journal/models/shelf.py:105 journal/models/shelf.py:145
+#: journal/models/shelf.py:106 journal/models/shelf.py:146
 msgid "finish watching"
 msgstr "acabar de ver"
 
-#: journal/models/shelf.py:106 journal/models/shelf.py:146
+#: journal/models/shelf.py:107 journal/models/shelf.py:147
 #, python-brace-format
 msgid "finished watching {item}"
 msgstr "acabou de ver {item}"
 
-#: journal/models/shelf.py:107 journal/models/shelf.py:147
+#: journal/models/shelf.py:108 journal/models/shelf.py:148
 msgid "watched"
 msgstr "visto"
 
-#: journal/models/shelf.py:112
+#: journal/models/shelf.py:113
 msgid "movies dropped"
 msgstr "filmes deixados"
 
-#: journal/models/shelf.py:113 journal/models/shelf.py:153
+#: journal/models/shelf.py:114 journal/models/shelf.py:154
 msgid "stop watching"
 msgstr "parar de ver"
 
-#: journal/models/shelf.py:114 journal/models/shelf.py:154
+#: journal/models/shelf.py:115 journal/models/shelf.py:155
 #, python-brace-format
 msgid "stopped watching {item}"
 msgstr "parou de ver {item}"
 
-#: journal/models/shelf.py:115 journal/models/shelf.py:155
+#: journal/models/shelf.py:116 journal/models/shelf.py:156
 msgid "stopped watching"
 msgstr "parou de ver"
 
-#: journal/models/shelf.py:120
+#: journal/models/shelf.py:121
 msgid "movies reviewed"
 msgstr "filmes resenhados"
 
-#: journal/models/shelf.py:128
+#: journal/models/shelf.py:129
 msgid "TV shows to watch"
 msgstr "programas para ver"
 
-#: journal/models/shelf.py:136
+#: journal/models/shelf.py:137
 msgid "TV shows watching"
 msgstr "programas a ver"
 
-#: journal/models/shelf.py:144
+#: journal/models/shelf.py:145
 msgid "TV shows watched"
 msgstr "programas vistos"
 
-#: journal/models/shelf.py:152
+#: journal/models/shelf.py:153
 msgid "TV shows dropped"
 msgstr "programas deixados"
 
-#: journal/models/shelf.py:160
+#: journal/models/shelf.py:161
 msgid "TV shows reviewed"
 msgstr "programas resenhados"
 
-#: journal/models/shelf.py:168
+#: journal/models/shelf.py:169
 msgid "albums to listen"
 msgstr "álbuns para ouvir"
 
-#: journal/models/shelf.py:169 journal/models/shelf.py:249
+#: journal/models/shelf.py:170 journal/models/shelf.py:250
 msgid "want to listen"
 msgstr "quer ouvir"
 
-#: journal/models/shelf.py:170 journal/models/shelf.py:250
+#: journal/models/shelf.py:171 journal/models/shelf.py:251
 #, python-brace-format
 msgid "wants to listen {item}"
 msgstr "quer ouvir {item}"
 
-#: journal/models/shelf.py:171 journal/models/shelf.py:251
+#: journal/models/shelf.py:172 journal/models/shelf.py:252
 msgid "to listen"
 msgstr "para ouvir"
 
-#: journal/models/shelf.py:176
+#: journal/models/shelf.py:177
 msgid "albums listening"
 msgstr "álbuns a ouvir"
 
-#: journal/models/shelf.py:177 journal/models/shelf.py:257
+#: journal/models/shelf.py:178 journal/models/shelf.py:258
 msgid "start listening"
 msgstr "começou a ouvir"
 
-#: journal/models/shelf.py:178 journal/models/shelf.py:258
+#: journal/models/shelf.py:179 journal/models/shelf.py:259
 #, python-brace-format
 msgid "started listening {item}"
 msgstr "começou a ouvir {item}"
 
-#: journal/models/shelf.py:179 journal/models/shelf.py:259
+#: journal/models/shelf.py:180 journal/models/shelf.py:260
 msgid "listening"
 msgstr "a ouvir"
 
-#: journal/models/shelf.py:184
+#: journal/models/shelf.py:185
 msgid "albums listened"
 msgstr "álbuns ouvidos"
 
-#: journal/models/shelf.py:185 journal/models/shelf.py:265
+#: journal/models/shelf.py:186 journal/models/shelf.py:266
 msgid "finish listening"
 msgstr "acabou de ouvir"
 
-#: journal/models/shelf.py:186 journal/models/shelf.py:266
+#: journal/models/shelf.py:187 journal/models/shelf.py:267
 #, python-brace-format
 msgid "finished listening {item}"
 msgstr "acabou de ouvir {item}"
 
-#: journal/models/shelf.py:187 journal/models/shelf.py:267
+#: journal/models/shelf.py:188 journal/models/shelf.py:268
 msgid "listened"
 msgstr "ouvido"
 
-#: journal/models/shelf.py:192
+#: journal/models/shelf.py:193
 msgid "albums dropped"
 msgstr "álbuns deixados"
 
-#: journal/models/shelf.py:193 journal/models/shelf.py:273
+#: journal/models/shelf.py:194 journal/models/shelf.py:274
 msgid "stop listening"
 msgstr "parar de ouvir"
 
-#: journal/models/shelf.py:194 journal/models/shelf.py:274
+#: journal/models/shelf.py:195 journal/models/shelf.py:275
 #, python-brace-format
 msgid "stopped listening {item}"
 msgstr "parou de ouvir {item}"
 
-#: journal/models/shelf.py:195 journal/models/shelf.py:275
+#: journal/models/shelf.py:196 journal/models/shelf.py:276
 msgid "stopped listening"
 msgstr "parou de ouvir"
 
-#: journal/models/shelf.py:200
+#: journal/models/shelf.py:201
 msgid "albums reviewed"
 msgstr "álbuns resenhados"
 
-#: journal/models/shelf.py:208
+#: journal/models/shelf.py:209
 msgid "games to play"
 msgstr "jogos para jogar"
 
-#: journal/models/shelf.py:209
+#: journal/models/shelf.py:210
 msgid "want to play"
 msgstr "quer jogar"
 
-#: journal/models/shelf.py:210
+#: journal/models/shelf.py:211
 #, python-brace-format
 msgid "wants to play {item}"
 msgstr "quer jogar {item}"
 
-#: journal/models/shelf.py:211
+#: journal/models/shelf.py:212
 msgid "to play"
 msgstr "para jogar"
 
-#: journal/models/shelf.py:216
+#: journal/models/shelf.py:217
 msgid "games playing"
 msgstr "jogos em curso"
 
-#: journal/models/shelf.py:217
+#: journal/models/shelf.py:218
 msgid "start playing"
 msgstr "começar a jogar"
 
-#: journal/models/shelf.py:218
+#: journal/models/shelf.py:219
 #, python-brace-format
 msgid "started playing {item}"
 msgstr "começou a jogar {item}"
 
-#: journal/models/shelf.py:219
+#: journal/models/shelf.py:220
 msgid "playing"
 msgstr "a jogar"
 
-#: journal/models/shelf.py:224
+#: journal/models/shelf.py:225
 msgid "games played"
 msgstr "jogos jogados"
 
-#: journal/models/shelf.py:225
+#: journal/models/shelf.py:226
 msgid "finish playing"
 msgstr "terminar o jogo"
 
-#: journal/models/shelf.py:226
+#: journal/models/shelf.py:227
 #, python-brace-format
 msgid "finished playing {item}"
 msgstr "terminou o jogo {item}"
 
-#: journal/models/shelf.py:227
+#: journal/models/shelf.py:228
 msgid "played"
 msgstr "jogado"
 
-#: journal/models/shelf.py:232
+#: journal/models/shelf.py:233
 msgid "games dropped"
 msgstr "jogos deixados"
 
-#: journal/models/shelf.py:233
+#: journal/models/shelf.py:234
 msgid "stop playing"
 msgstr "parar de jogar"
 
-#: journal/models/shelf.py:234
+#: journal/models/shelf.py:235
 #, python-brace-format
 msgid "stopped playing {item}"
 msgstr "parou de jogar {item}"
 
-#: journal/models/shelf.py:235
+#: journal/models/shelf.py:236
 msgid "stopped playing"
 msgstr "parou de jogar"
 
-#: journal/models/shelf.py:240
+#: journal/models/shelf.py:241
 msgid "games reviewed"
 msgstr "jogos resenhados"
 
-#: journal/models/shelf.py:248
+#: journal/models/shelf.py:249
 msgid "podcasts to listen"
 msgstr "podcasts para ouvir"
 
-#: journal/models/shelf.py:256
+#: journal/models/shelf.py:257
 msgid "podcasts listening"
 msgstr "podcasts a ouvir"
 
-#: journal/models/shelf.py:264
+#: journal/models/shelf.py:265
 msgid "podcasts listened"
 msgstr "podcasts ouvidos"
 
-#: journal/models/shelf.py:272
+#: journal/models/shelf.py:273
 msgid "podcasts dropped"
 msgstr "podcasts deixados"
 
-#: journal/models/shelf.py:280
+#: journal/models/shelf.py:281
 msgid "podcasts reviewed"
 msgstr "podcasts resenhados"
 
-#: journal/models/shelf.py:288
+#: journal/models/shelf.py:289
 msgid "performances to see"
 msgstr "espetáculos para ver"
 
-#: journal/models/shelf.py:289
+#: journal/models/shelf.py:290
 msgid "want to see"
 msgstr "quero assistir"
 
-#: journal/models/shelf.py:290
+#: journal/models/shelf.py:291
 #, python-brace-format
 msgid "wants to see {item}"
 msgstr "quer assistir {item}"
 
-#: journal/models/shelf.py:291
+#: journal/models/shelf.py:292
 msgid "to see"
 msgstr "para assistir"
 
-#: journal/models/shelf.py:298
+#: journal/models/shelf.py:299
 msgid "performances saw"
 msgstr "espetáculos assistidos"
 
-#: journal/models/shelf.py:299
+#: journal/models/shelf.py:300
 msgid "finish seeing"
 msgstr "terminar de assistir"
 
-#: journal/models/shelf.py:300
+#: journal/models/shelf.py:301
 #, python-brace-format
 msgid "finished seeing {item}"
 msgstr "acabou de assistir {item}"
 
-#: journal/models/shelf.py:301
+#: journal/models/shelf.py:302
 msgid "seen"
 msgstr "assistido"
 
-#: journal/models/shelf.py:306
+#: journal/models/shelf.py:307
 msgid "performances dropped"
 msgstr "espetáculo deixado"
 
-#: journal/models/shelf.py:307
+#: journal/models/shelf.py:308
 msgid "stop seeing"
 msgstr "parar de assistir"
 
-#: journal/models/shelf.py:308
+#: journal/models/shelf.py:309
 #, python-brace-format
 msgid "stopped seeing {item}"
 msgstr "parou de assistir {item}"
 
-#: journal/models/shelf.py:309
+#: journal/models/shelf.py:310
 msgid "stopped seeing"
 msgstr "parou de assistir"
 
-#: journal/models/shelf.py:314
+#: journal/models/shelf.py:315
 msgid "performances reviewed"
 msgstr "espetáculos resenhados"
 
-#: journal/models/shelf.py:322
+#: journal/models/shelf.py:323
 #, fuzzy
 #| msgid "Users you are following"
 msgid "people following"
 msgstr "Utilizadores que está a seguir"
 
-#: journal/models/shelf.py:324
+#: journal/models/shelf.py:325
 #, fuzzy, python-brace-format
 #| msgid "started playing {item}"
 msgid "started following {item}"
 msgstr "começou a jogar {item}"
 
-#: journal/models/shelf.py:900
+#: journal/models/shelf.py:907
 msgid "removed mark"
 msgstr "marcação removida"
 
@@ -6246,6 +6252,18 @@ msgstr ""
 " %(dups)s itens são da mesma obra ou pertencem à mesma pessoa. Estes itens "
 "estão ocultos dos resultados de pesquisa., <a _=\"on click toggle .unfold on "
 "#dup\"> Clique aqui para vê-los.</a> "
+
+#: journal/templates/_sidebar_collection_filter.html:32
+#, fuzzy
+#| msgid "books dropped"
+msgid "dropped"
+msgstr "livros deixados"
+
+#: journal/templates/_sidebar_collection_filter.html:33
+#, fuzzy
+#| msgid "not rated"
+msgid "not marked yet"
+msgstr "sem avaliação"
 
 #: journal/templates/_sidebar_search_journal.html:6
 msgid "filter by one of these statuses"
@@ -6386,7 +6404,7 @@ msgid "View post"
 msgstr ""
 
 #: journal/templates/action_quote_post.html:3
-#: journal/templates/article.html:190 journal/templates/collection.html:168
+#: journal/templates/article.html:190 journal/templates/collection.html:174
 msgid "Quote"
 msgstr ""
 
@@ -6395,7 +6413,7 @@ msgid "reply"
 msgstr "responder"
 
 #: journal/templates/action_reply_post.html:3
-#: journal/templates/article.html:181 journal/templates/collection.html:159
+#: journal/templates/article.html:181 journal/templates/collection.html:165
 msgid "Reply"
 msgstr "Responder"
 
@@ -6510,7 +6528,7 @@ msgstr "Partilhar"
 msgid "created a collection"
 msgstr "coleção criada"
 
-#: journal/templates/collection.html:175
+#: journal/templates/collection.html:181
 msgid "Query"
 msgstr ""
 
@@ -6733,7 +6751,7 @@ msgstr "sumário anual"
 msgid "Articles"
 msgstr ""
 
-#: journal/templates/profile.html:166 journal/views/collection.py:385
+#: journal/templates/profile.html:166 journal/views/collection.py:427
 #: journal/views/profile.py:401
 msgid "collection"
 msgstr "coleção"
@@ -6833,73 +6851,80 @@ msgstr "Partilhar relatório anual"
 msgid "#%(year)s_report"
 msgstr "#Relatório_%(year)s"
 
-#: journal/views/article.py:173 journal/views/review.py:168
+#: journal/views/article.py:184 journal/views/review.py:180
 #, fuzzy
 #| msgid "User not found"
 msgid "User not local"
 msgstr "Utilizador não encontrado"
 
-#: journal/views/article.py:181 journal/views/article.py:195
+#: journal/views/article.py:192 journal/views/article.py:206
 #, fuzzy, python-brace-format
 #| msgid "Reviews by {0}"
 msgid "Articles by {0}"
 msgstr "Resenhas de {0}"
 
-#: journal/views/article.py:183 journal/views/article.py:191
-#: journal/views/review.py:178 journal/views/review.py:186
+#: journal/views/article.py:194 journal/views/article.py:202
+#: journal/views/review.py:190 journal/views/review.py:198
 msgid "Link invalid"
 msgstr "Link inválido"
 
-#: journal/views/collection.py:56 journal/views/collection.py:94
+#: journal/views/collection.py:58 journal/views/collection.py:96
 #, python-brace-format
 msgid "Collection by {0}"
 msgstr "Coleção de {0}"
 
-#: journal/views/collection.py:390
+#: journal/views/collection.py:432
 msgid "shared my collection"
 msgstr "partilhou a minha coleção"
 
-#: journal/views/collection.py:393
+#: journal/views/collection.py:435
 #, python-brace-format
 msgid "shared {username}'s collection"
 msgstr "partilhou a coleção de {username}"
 
-#: journal/views/collection.py:460 journal/views/collection.py:499
-#: journal/views/collection.py:511 journal/views/collection.py:537
+#: journal/views/collection.py:502 journal/views/collection.py:541
+#: journal/views/collection.py:553 journal/views/collection.py:579
 msgid "Dynamic collection is not editable"
 msgstr ""
 
-#: journal/views/collection.py:476
+#: journal/views/collection.py:518
 #, fuzzy
 #| msgid "This username is already in use."
 msgid "The item is already in the collection."
 msgstr "Este nome de utilizador já está a ser usado."
 
-#: journal/views/collection.py:478
+#: journal/views/collection.py:520
 msgid "Unable to find the item, please use item url from this site."
 msgstr ""
 "Não foi possível encontrar o item. Por favor, insira um item de url deste "
 "site."
 
-#: journal/views/collection.py:524
+#: journal/views/collection.py:566
 #, fuzzy
 #| msgid "Save"
 msgid "Saved."
 msgstr "Guardar"
 
-#: journal/views/common.py:146 journal/views/mark.py:159
+#: journal/views/common.py:119 journal/views/mark.py:225
+#: journal/views/mark.py:279 journal/views/note.py:175
+#: journal/views/profile.py:42 journal/views/review.py:59
+#: journal/views/review.py:79
+msgid "Content not found"
+msgstr "Conteúdo não encontrado"
+
+#: journal/views/common.py:174 journal/views/mark.py:159
 msgid "Data saved but unable to crosspost to Fediverse instance."
 msgstr ""
 "Dados guardados, porém, não é possível fazer crosspost para a instância do "
 "Fediverso."
 
-#: journal/views/common.py:148
+#: journal/views/common.py:176
 msgid "Redirecting to your Fediverse instance now to re-authenticate."
 msgstr ""
 "Está a ser redirecionado para a sua instância do Fediverso de modo a fazer "
 "novamente a sua autenticação."
 
-#: journal/views/common.py:155
+#: journal/views/common.py:183
 msgid "List not found."
 msgstr "Lista não encontrada."
 
@@ -6912,12 +6937,6 @@ msgstr "Conteúdo demasiado longo para a sua instância do Fediverso."
 #| msgid "Invalid tag"
 msgid "Invalid input"
 msgstr "Etiqueta inválida"
-
-#: journal/views/mark.py:225 journal/views/mark.py:279
-#: journal/views/note.py:175 journal/views/profile.py:42
-#: journal/views/review.py:50 journal/views/review.py:67
-msgid "Content not found"
-msgstr "Conteúdo não encontrado"
 
 #: journal/views/note.py:23
 msgid "Progress"
@@ -6949,49 +6968,49 @@ msgstr "Tipo de progresso (opcional)"
 msgid "Only in-progress items can have progress."
 msgstr ""
 
-#: journal/views/post.py:98 journal/views/post.py:387
+#: journal/views/post.py:98 journal/views/post.py:392
 msgid "Post not found"
 msgstr "Post não encontrado"
 
-#: journal/views/post.py:184
+#: journal/views/post.py:189
 msgid "Visibility too high for quoting this post"
 msgstr ""
 
-#: journal/views/post.py:332 journal/views/post.py:413
+#: journal/views/post.py:337 journal/views/post.py:418
 #, fuzzy
 #| msgid "Item cannot be deleted."
 msgid "Content cannot be empty."
 msgstr "Este item não pode ser apagado."
 
-#: journal/views/post.py:391
+#: journal/views/post.py:396
 #, fuzzy
 #| msgid "This operation cannot be undone. Sure to merge?"
 msgid "This post cannot be edited here"
 msgstr "Esta operação não pode ser desfeita. Tem certeza que deseja mesclar?"
 
-#: journal/views/post.py:536
+#: journal/views/post.py:541
 #, fuzzy
 #| msgid "Invalid file."
 msgid "Invalid choices"
 msgstr "Ficheiro inválido."
 
-#: journal/views/post.py:539
+#: journal/views/post.py:544
 #, fuzzy
 #| msgid "Invalid tag"
 msgid "Invalid post"
 msgstr "Etiqueta inválida"
 
-#: journal/views/review.py:176 journal/views/review.py:190
+#: journal/views/review.py:188 journal/views/review.py:202
 #, python-brace-format
 msgid "Reviews by {0}"
 msgstr "Resenhas de {0}"
 
-#: journal/views/review.py:199
+#: journal/views/review.py:211
 #, python-brace-format
 msgid "{review_title} - a review of {item_title}"
 msgstr "{review_title} - uma análise de {item_title}"
 
-#: journal/views/review.py:203
+#: journal/views/review.py:215
 #, fuzzy
 #| msgid "regarding {item_title}, may contain spoiler or triggering content"
 msgid "may contain spoiler or triggering content"
@@ -7018,7 +7037,7 @@ msgstr "Etiqueta duplicada."
 msgid "Tag updated."
 msgstr "Etiqueta atualizada."
 
-#: journal/views/wrapped.py:151
+#: journal/views/wrapped.py:160
 msgid "Summary posted to timeline."
 msgstr "Sumário publicado na timeline."
 
@@ -7166,7 +7185,8 @@ msgstr "A autenticação falhou"
 #, fuzzy
 #| msgid "System busy, please try again in a minute."
 msgid "Too many attempts, please try again later."
-msgstr "Sistema sobrecarregado. Por favor, tente novamente dentro de um minuto."
+msgstr ""
+"Sistema sobrecarregado. Por favor, tente novamente dentro de um minuto."
 
 #: mastodon/views/bluesky.py:40
 #, fuzzy
@@ -7654,49 +7674,19 @@ msgstr ""
 msgid "Poll ending at %(end_time)s"
 msgstr ""
 
-#: social/templates/single_post.html:12 social/templates/single_post.html:25
+#: social/templates/single_post.html:13 social/templates/single_post.html:32
 #, fuzzy
 #| msgid "Posts"
 msgid "Post"
 msgstr "Posts"
 
-#: social/templates/single_post.html:19
+#: social/templates/single_post.html:26
 msgid "Article"
 msgstr ""
 
-#: social/templates/single_post.html:22
+#: social/templates/single_post.html:29
 msgid "Poll"
 msgstr ""
-
-#: takahe/models.py:452
-msgid "Display Name"
-msgstr "Nome de apresentação"
-
-#: takahe/models.py:454
-msgid "Bio"
-msgstr "Bio"
-
-#: takahe/models.py:456
-msgid "Manually approve new followers"
-msgstr "Aprovar novos seguidores manualmente"
-
-#: takahe/models.py:460
-#, fuzzy
-#| msgid "Include profile and posts in discovery"
-msgid "Include profile, marks and posts in discovery"
-msgstr "Incluir perfil e publicações em \"explorar\""
-
-#: takahe/models.py:463
-msgid "Include posts in search results"
-msgstr "Incluir posts nos resultados de pesquisa"
-
-#: takahe/models.py:481
-msgid "Profile picture"
-msgstr "Foto de perfil"
-
-#: takahe/models.py:488
-msgid "Header picture"
-msgstr "Foto de cabeçalho"
 
 #: users/models/task.py:22
 msgid "Started"
@@ -8301,7 +8291,7 @@ msgstr ""
 #: users/templates/users/account.html:436 users/templates/users/data.html:74
 #: users/templates/users/data.html:126 users/templates/users/data.html:183
 #: users/templates/users/data.html:234 users/templates/users/data.html:298
-#: users/templates/users/data.html:358
+#: users/templates/users/data.html:358 users/templates/users/data.html:553
 #: users/templates/users/steam_import.html:140
 msgid "Import"
 msgstr "Importar"
@@ -8693,6 +8683,48 @@ msgid "Download"
 msgstr "Download"
 
 #: users/templates/users/data.html:496
+msgid "Import and Export Articles (WordPress)"
+msgstr ""
+
+#: users/templates/users/data.html:499
+msgid ""
+"Your articles are exchanged as WordPress posts in the WXR format, which "
+"WordPress and most blogging tools can read and write. Marks, reviews and "
+"notes are not included: use the NeoDB archive above for those."
+msgstr ""
+
+#: users/templates/users/data.html:502
+msgid ""
+"Article title, body, excerpt, tags, dates and featured image are exchanged. "
+"Comments and custom fields are ignored."
+msgstr ""
+
+#: users/templates/users/data.html:505
+msgid ""
+"The body is converted between Markdown and HTML, so formatting is kept but "
+"the text is not character-for-character identical."
+msgstr ""
+
+#: users/templates/users/data.html:512
+#, fuzzy
+#| msgid "Export marks and reviews"
+msgid "Export articles in WordPress format"
+msgstr "Exportar marcações e críticas"
+
+#: users/templates/users/data.html:519
+msgid ""
+"In WordPress, go to <b>Tools</b> - <b>Export</b> - <b>Posts</b> to download "
+"an <code>.xml</code> file, then upload it below."
+msgstr ""
+
+#: users/templates/users/data.html:522
+msgid ""
+"Only published posts use the visibility below. Drafts, pending, private and "
+"password-protected posts are always imported as mentioned-only, so nothing "
+"unpublished becomes public."
+msgstr ""
+
+#: users/templates/users/data.html:560
 msgid "View Annual Summary"
 msgstr "Ver Relatório Anual"
 
@@ -9535,154 +9567,154 @@ msgstr "A conta está a ser apagada."
 msgid "Account mismatch."
 msgstr "Conta incompatível."
 
-#: users/views/data.py:243 users/views/data.py:273
+#: users/views/data.py:262 users/views/data.py:294
 msgid "Export file not available."
 msgstr "O ficheiro de exportação não se encontra disponível."
 
-#: users/views/data.py:267
+#: users/views/data.py:288
 msgid "Generating exports."
 msgstr "A gerar exportações."
 
-#: users/views/data.py:285
+#: users/views/data.py:306
 msgid "Export file expired. Please export again."
 msgstr "O ficheiro de exportação expirou. Por favor, tente novamente."
 
-#: users/views/data.py:300 users/views/data.py:321
+#: users/views/data.py:321 users/views/data.py:342 users/views/data.py:363
 #, fuzzy
 #| msgid "Import in progress."
 msgid "Recent export still in progress."
 msgstr "Importação em progresso."
 
-#: users/views/data.py:336
+#: users/views/data.py:379 users/views/data.py:513 users/views/data.py:547
+#: users/views/data.py:772 users/views/data.py:989 users/views/data.py:1015
+#: users/views/data.py:1040 users/views/data.py:1065
+msgid "Invalid file."
+msgstr "Ficheiro inválido."
+
+#: users/views/data.py:403
 msgid "Sync in progress."
 msgstr "Sincronização em progresso."
 
-#: users/views/data.py:350
+#: users/views/data.py:417
 msgid "Settings saved."
 msgstr "Definições guardadas."
 
-#: users/views/data.py:405
+#: users/views/data.py:472
 #, fuzzy
 #| msgid "Account is being deleted."
 msgid "Account no longer linked."
 msgstr "A conta está a ser apagada."
 
-#: users/views/data.py:408
+#: users/views/data.py:475
 msgid "Content is no longer public."
 msgstr ""
 
-#: users/views/data.py:436
+#: users/views/data.py:503
 msgid "Retry did not complete, please try again."
 msgstr ""
 
-#: users/views/data.py:446 users/views/data.py:480 users/views/data.py:705
-#: users/views/data.py:922 users/views/data.py:948 users/views/data.py:973
-#: users/views/data.py:998
-msgid "Invalid file."
-msgstr "Ficheiro inválido."
-
-#: users/views/data.py:516 users/views/data.py:741
+#: users/views/data.py:583 users/views/data.py:808
 msgid "Loaded from uploaded matched file."
 msgstr ""
 
-#: users/views/data.py:541 users/views/data.py:770
+#: users/views/data.py:608 users/views/data.py:837
 #, fuzzy
 #| msgid "Cancel"
 msgid "Cancelled."
 msgstr "Cancelar"
 
-#: users/views/data.py:561
+#: users/views/data.py:628
 msgid "No RateYourMusic import to preview."
 msgstr ""
 
-#: users/views/data.py:569 users/views/data.py:679 users/views/data.py:800
-#: users/views/data.py:905
+#: users/views/data.py:636 users/views/data.py:746 users/views/data.py:867
+#: users/views/data.py:972
 msgid "Matched file missing."
 msgstr ""
 
-#: users/views/data.py:665 users/views/data.py:891
+#: users/views/data.py:732 users/views/data.py:958
 msgid "Starting import..."
 msgstr ""
 
-#: users/views/data.py:675 users/views/data.py:901
+#: users/views/data.py:742 users/views/data.py:968
 #, fuzzy
 #| msgid "Export file not available."
 msgid "No matched file available."
 msgstr "O ficheiro de exportação não se encontra disponível."
 
-#: users/views/data.py:792
+#: users/views/data.py:859
 msgid "No StoryGraph import to preview."
 msgstr ""
 
-#: users/views/data.py:1121
+#: users/views/data.py:1188
 #, fuzzy
 #| msgid "Login required"
 msgid "Name is required."
 msgstr "Requer iniciar sessão"
 
-#: users/views/data.py:1143
+#: users/views/data.py:1210
 msgid "Application access has been revoked."
 msgstr ""
 
-#: users/views/data.py:1159
+#: users/views/data.py:1226
 msgid "Alias update not allowed for a moved account."
 msgstr ""
 
-#: users/views/data.py:1164
+#: users/views/data.py:1231
 msgid "No alias specified."
 msgstr ""
 
-#: users/views/data.py:1174 users/views/data.py:1225
+#: users/views/data.py:1241 users/views/data.py:1292
 msgid "Looking up the account. Please try again in a few seconds."
 msgstr ""
 
-#: users/views/data.py:1181
+#: users/views/data.py:1248
 #, python-brace-format
 msgid "Alias to {handle} removed."
 msgstr ""
 
-#: users/views/data.py:1186
+#: users/views/data.py:1253
 #, python-brace-format
 msgid "Alias to {handle} added."
 msgstr ""
 
-#: users/views/data.py:1212
+#: users/views/data.py:1279
 #, fuzzy
 #| msgid "Registration failed"
 msgid "Migration cancelled."
 msgstr "Falha ao registar-se"
 
-#: users/views/data.py:1217
+#: users/views/data.py:1284
 msgid "No target account specified."
 msgstr ""
 
-#: users/views/data.py:1230
+#: users/views/data.py:1297
 msgid "Cannot migrate to a local account."
 msgstr ""
 
-#: users/views/data.py:1241
+#: users/views/data.py:1308
 msgid "You must set up an alias in the target account first."
 msgstr ""
 
-#: users/views/data.py:1247
+#: users/views/data.py:1314
 #, fuzzy, python-brace-format
 #| msgid "Continue login as {handle}."
 msgid "Start moving to {handle}."
 msgstr "Continuar início de sessão como {handle}."
 
-#: users/views/data.py:1305
+#: users/views/data.py:1372
 msgid "No file uploaded."
 msgstr ""
 
-#: users/views/data.py:1321
+#: users/views/data.py:1388
 msgid "The uploaded file is not a valid CSV."
 msgstr ""
 
-#: users/views/data.py:1325
+#: users/views/data.py:1392
 msgid "No valid entries found in the CSV file."
 msgstr ""
 
-#: users/views/data.py:1335
+#: users/views/data.py:1402
 #, python-brace-format
 msgid ""
 "Import of {count} entries received. They will be processed in the background."
@@ -9726,6 +9758,29 @@ msgstr "Utilizador não encontrado"
 #| msgid "Login required"
 msgid "Name is required"
 msgstr "Requer iniciar sessão"
+
+#~ msgid "Display Name"
+#~ msgstr "Nome de apresentação"
+
+#~ msgid "Bio"
+#~ msgstr "Bio"
+
+#~ msgid "Manually approve new followers"
+#~ msgstr "Aprovar novos seguidores manualmente"
+
+#, fuzzy
+#~| msgid "Include profile and posts in discovery"
+#~ msgid "Include profile, marks and posts in discovery"
+#~ msgstr "Incluir perfil e publicações em \"explorar\""
+
+#~ msgid "Include posts in search results"
+#~ msgstr "Incluir posts nos resultados de pesquisa"
+
+#~ msgid "Profile picture"
+#~ msgstr "Foto de perfil"
+
+#~ msgid "Header picture"
+#~ msgstr "Foto de cabeçalho"
 
 #~ msgid "Fanfic"
 #~ msgstr "Fanfic"
