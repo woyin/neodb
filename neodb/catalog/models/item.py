@@ -568,24 +568,10 @@ class Item(PolymorphicModel):
         return self.__class__.__name__.lower()
 
     def get_localized_title(self) -> str | None:
-        if self.localized_title:
-            locales = get_current_locales()
-            for loc in locales:
-                v = next(
-                    filter(lambda t: t["lang"] == loc, self.localized_title), {}
-                ).get("text")
-                if v:
-                    return v
+        return localized_label_text(self.localized_title)
 
     def get_localized_description(self) -> str | None:
-        if self.localized_description:
-            locales = get_current_locales()
-            for loc in locales:
-                v = next(
-                    filter(lambda t: t["lang"] == loc, self.localized_description), {}
-                ).get("text")
-                if v:
-                    return v
+        return localized_label_text(self.localized_description)
 
     @cached_property
     def display_resources(self) -> "list[ExternalResource]":
@@ -1057,7 +1043,7 @@ class Item(PolymorphicModel):
         """
         lookup_ids = {}
         r = None
-        resources = override_resources or self.external_resources.all()
+        resources = self._resources_for_normalize(override_resources)
         for res in resources:
             r = res
             lookup_ids.update(res.other_lookup_ids or {})
@@ -1081,6 +1067,35 @@ class Item(PolymorphicModel):
             logger.debug(f"Updated primary_lookup_id for {self} to {pid}")
             return True
         return False
+
+    def _demote_wikidata_descriptions(self, override_resources=None) -> bool:
+        """Move Wikidata-sourced entries to the end of ``localized_description``.
+
+        Wikidata descriptions are short disambiguators, not synopses, and must
+        not outrank a richer source that merged later (#1806). Matching on the
+        stored resource metadata keeps this independent of fetch order.
+        """
+        if not self.localized_description:
+            return False
+        resources = self._resources_for_normalize(override_resources)
+        wikidata = {
+            (d.get("lang"), d.get("text"))
+            for res in resources
+            if res.id_type == IdType.WikiData
+            for d in (res.metadata or {}).get("localized_description") or []
+        }
+        if not wikidata:
+            return False
+        kept = []
+        demoted = []
+        for d in self.localized_description:
+            target = demoted if (d.get("lang"), d.get("text")) in wikidata else kept
+            target.append(d)
+        reordered = kept + demoted
+        if reordered == self.localized_description:
+            return False
+        self.localized_description = reordered
+        return True
 
     def _normalize_languages(self):
         changed = False
@@ -1141,14 +1156,24 @@ class Item(PolymorphicModel):
                 return True
         return False
 
+    def _resources_for_normalize(
+        self, override_resources: "list[ExternalResource] | None"
+    ) -> "list[ExternalResource]":
+        if override_resources is None:
+            return list(self.external_resources.all())
+        return override_resources
+
     def normalize_metadata(self, override_resources=None) -> bool:
-        r = self._update_primary_lookup_id(override_resources)
+        # resolve the resource list once; several normalizers consume it
+        resources = self._resources_for_normalize(override_resources)
+        r = self._update_primary_lookup_id(resources)
         r |= self._normalize_languages()
         r |= self._normalize_genres()
         r |= self._normalize_countries()
         r |= self._normalize_music_formats()
         r |= self._normalize_platforms()
         r |= self._normalize_release_date()
+        r |= self._demote_wikidata_descriptions(resources)
         return r
 
     def merge_data_from_external_resource(
