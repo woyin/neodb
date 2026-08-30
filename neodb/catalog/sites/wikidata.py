@@ -16,11 +16,12 @@ from catalog.common import (
     SiteManager,
     SiteName,
 )
-from catalog.common.downloaders import BasicDownloader
+from catalog.common.downloaders import BasicDownloader, DownloadError
 from catalog.models import (
     Album,
     Edition,
     Game,
+    Item,
     Movie,
     People,
     Performance,
@@ -54,7 +55,12 @@ class WikidataTypes:
     TV_PROGRAM = "Q15416"  # Television program
     TV_MINISERIES = "Q1259759"  # Miniseries/Limited series
     TV_FILM = "Q506240"  # Television film/TV movie
-    MUSIC_SINGLE = "Q134556"
+    MUSIC_ALBUM = "Q482994"  # album
+    MUSIC_SINGLE = "Q134556"  # single
+    MUSIC_EP = "Q169930"  # extended play
+    VIDEO_ALBUM = "Q10590726"  # video album
+    MUSIC_RELEASE_GROUP = "Q108346082"  # release group
+    MUSICAL_RELEASE = "Q2031291"  # musical release
     MEDIA_FRANCHISE = "Q196600"  # Media franchise/series
     GAME = "Q11410"
     VIDEO_GAME = "Q7889"  # Video game
@@ -93,121 +99,26 @@ class WikidataTypes:
     FILM_PRODUCTION_COMPANY = "Q1762059"  # Film production company
     VIDEO_GAME_DEVELOPER = "Q210167"  # Video game developer
     VIDEO_GAME_PUBLISHER = "Q1137109"  # Video game publisher
-    ANIMATION_STUDIO = "Q17313235"  # Animation studio
-    FILM_STUDIO = "Q1660723"  # Film studio
-    THEATER_COMPANY = "Q3529889"  # Theater company
+    ANIMATION_STUDIO = "Q1107679"  # animation studio
+    FILM_STUDIO = "Q375336"  # film studio
+    THEATER_COMPANY = "Q742421"  # theatre company
 
 
-# Wikidata Properties for metadata extraction
+# Wikidata Properties NeoDB reads; IdTypeMapping keys stay raw strings
 class WikidataProperties:
-    # Core properties
-    P18 = "P18"  # image
-    P31 = "P31"  # instance of
-    P154 = "P154"  # logo image
-    P279 = "P279"  # subclass of
-    P2716 = "P2716"  # collage image
-    P3383 = "P3383"  # film poster
-
-    # Common metadata
-    P50 = "P50"  # author
-    P57 = "P57"  # director
-    P86 = "P86"  # composer
-    P136 = "P136"  # genre
-    P144 = "P144"  # based on
-    P161 = "P161"  # cast member
-    P170 = "P170"  # creator
-    P175 = "P175"  # performer
-    P178 = "P178"  # developer
-    P179 = "P179"  # part of the series
-    P272 = "P272"  # production company
-    P275 = "P275"  # copyright license
-    P276 = "P276"  # location
-    P287 = "P287"  # designed by
-    P291 = "P291"  # place of publication
-    P364 = "P364"  # original language
-    P371 = "P371"  # presenter
-    P400 = "P400"  # platform
-    P404 = "P404"  # game mode
-    P407 = "P407"  # language of work
-    P408 = "P408"  # software engine
-    P433 = "P433"  # issue/episode number
-    P437 = "P437"  # distribution format
-    P449 = "P449"  # original broadcaster
-    P453 = "P453"  # guest
-    P495 = "P495"  # country of origin
-    P571 = "P571"  # inception
-    P577 = "P577"  # publication date
-    P580 = "P580"  # start time
-    P582 = "P582"  # end time
-    P674 = "P674"  # characters
-    P710 = "P710"  # participant
-    P750 = "P750"  # distributed by
-    P856 = "P856"  # official website
-    P921 = "P921"  # main subject
-    P953 = "P953"  # full work available at URL
-    P1113 = "P1113"  # number of episodes
-    P1476 = "P1476"  # title
-    P1809 = "P1809"  # choreographer
-    P2047 = "P2047"  # duration
-    P2408 = "P2408"  # set in period
-    P2437 = "P2437"  # season
-    P2438 = "P2438"  # narrator
-    P2515 = "P2515"  # set designer
-    P2860 = "P2860"  # cites work
-    P3300 = "P3300"  # musical conductor
-    P5028 = "P5028"  # sound designer
-    P5029 = "P5029"  # costume designer
-    P5030 = "P5030"  # lighting designer
-
-    # Person-specific properties
-    P569 = "P569"  # date of birth
-    P570 = "P570"  # date of death
-
-    # External identifiers
-    P123 = "P123"  # publisher
-    P212 = "P212"  # ISBN-13
-    P345 = "P345"  # IMDb ID
-    P436 = "P436"  # MusicBrainz release group ID
-    P675 = "P675"  # Google Books ID
-    P957 = "P957"  # ISBN-10
-    P1712 = "P1712"  # Metacritic ID
-    P1733 = "P1733"  # Steam application ID
-    P1954 = "P1954"  # Discogs master ID
-    P2002 = "P2002"  # Twitter username
-    P2003 = "P2003"  # Instagram username
-    P2013 = "P2013"  # Facebook ID
-    P2206 = "P2206"  # Discogs release ID
-    P2339 = "P2339"  # BoardGameGeek ID
-    P2397 = "P2397"  # YouTube channel ID
-    P2969 = "P2969"  # Goodreads edition ID
-    P4529 = "P4529"  # Douban film ID
-    P4947 = "P4947"  # TMDb movie ID
-    P4983 = "P4983"  # TMDb TV series ID
-    P5732 = "P5732"  # Bangumi subject ID
-    P5794 = "P5794"  # IGDB game ID
-    P11688 = "P11688"  # MobyGames game ID
-    P5831 = "P5831"  # Spotify show ID
-    P5842 = "P5842"  # Apple Podcasts podcast ID
-    P6442 = "P6442"  # Douban book version/edition ID
-    P6443 = "P6443"  # Douban drama ID
-    P6444 = "P6444"  # Douban game ID
-    P8383 = "P8383"  # Goodreads work ID
-    P8419 = "P8419"  # Archive of Our Own tag
-    P10319 = "P10319"  # Douban book works ID
-    P648 = "P648"  # Open Library ID
-    P4300 = "P4300"  # YouTube playlist ID (YouTube Music album)
-    P8729 = "P8729"  # AniList anime ID
-    P8731 = "P8731"  # AniList manga ID
-    P4086 = "P4086"  # MyAnimeList anime ID
-    P4087 = "P4087"  # MyAnimeList manga ID
-
-    # Person-specific external identifiers
-    P4985 = "P4985"  # TMDb person ID
-    P2963 = "P2963"  # Goodreads author ID
-    P1902 = "P1902"  # Spotify artist ID
-    P9650 = "P9650"  # IGDB company ID
-    P12836 = "P12836"  # Douban personage ID
-    P434 = "P434"  # MusicBrainz artist ID
+    IMAGE = "P18"
+    INSTANCE_OF = "P31"
+    SUBCLASS_OF = "P279"
+    ISSUE_NUMBER = "P433"  # issue or episode number
+    DATE_OF_BIRTH = "P569"
+    DATE_OF_DEATH = "P570"
+    PUBLICATION_DATE = "P577"
+    END_TIME = "P582"
+    OFFICIAL_WEBSITE = "P856"
+    WORK_AVAILABLE_AT_URL = "P953"
+    NUMBER_OF_EPISODES = "P1113"
+    DURATION = "P2047"
+    NUMBER_OF_SEASONS = "P2437"
 
     IdTypeMapping = {
         "P345": IdType.IMDB,
@@ -277,6 +188,9 @@ def _get_preferred_languages():
 
 
 WIKIDATA_PREFERRED_LANGS = _get_preferred_languages()
+
+# 'subclass of' values per class QID; the same classes recur across imports
+_PARENT_TYPE_CACHE: dict[str, list[str]] = {}
 
 
 @SiteManager.register
@@ -353,6 +267,12 @@ class WikiData(AbstractSite):
         WikidataTypes.BOARD_GAME: Game,
         WikidataTypes.TABLETOP_GAME: Game,
         WikidataTypes.GAME_EMULATOR: Game,
+        WikidataTypes.MUSIC_ALBUM: Album,
+        WikidataTypes.MUSIC_SINGLE: Album,
+        WikidataTypes.MUSIC_EP: Album,
+        WikidataTypes.VIDEO_ALBUM: Album,
+        WikidataTypes.MUSIC_RELEASE_GROUP: Album,
+        WikidataTypes.MUSICAL_RELEASE: Album,
         WikidataTypes.PODCAST_SHOW: Podcast,
         WikidataTypes.PODCAST_EPISODE: PodcastEpisode,
         WikidataTypes.PLAY: Performance,
@@ -373,6 +293,15 @@ class WikiData(AbstractSite):
     # Types that have priority over all others
     PRIORITY_TYPES = [WikidataTypes.TV_SPECIAL]
 
+    # Classes too generic to identify a category on their own. They still count
+    # as a direct 'instance of' value, but are ignored while walking up the
+    # subclass graph: they sit above nearly every creative type, so matching
+    # them there turns any unmapped work into a book.
+    AMBIGUOUS_ANCESTOR_TYPES = frozenset({WikidataTypes.CREATIVE_WORK})
+
+    # Levels of 'subclass of' to walk when no direct type matches
+    MAX_DEPTH = 3
+
     @classmethod
     def id_to_url(cls, id_value):
         """Convert a Wikidata ID to URL"""
@@ -382,126 +311,65 @@ class WikiData(AbstractSite):
         api_url = f"https://www.wikidata.org/w/rest.php/wikibase/v1/entities/items/{entity_id}"
         return BasicDownloader(api_url).download().json()
 
-    def _extract_labels(self, entity_data):
+    @staticmethod
+    def _normalize_entity(entity_data: dict) -> dict:
+        """Flatten a REST v1 payload, keeping best-rank statement values only
+
+        Statements are reduced to {property_id: [content, ...]}. Statements
+        without a value (novalue/somevalue) and deprecated ones are dropped; a
+        property holding any preferred-rank statement keeps only those.
+        """
+        statements: dict[str, list] = {}
+        for property_id, raw in (entity_data.get("statements") or {}).items():
+            values = []
+            preferred = []
+            for statement in raw:
+                value = statement.get("value")
+                rank = statement.get("rank")
+                if not isinstance(value, dict) or value.get("type") != "value":
+                    continue
+                content = value.get("content")
+                if content is None or rank == "deprecated":
+                    continue
+                if rank == "preferred":
+                    preferred.append(content)
+                values.append(content)
+            if values:
+                statements[property_id] = preferred or values
+        return {
+            "id": entity_data.get("id"),
+            "type": entity_data.get("type", "item"),
+            "labels": entity_data.get("labels") or {},
+            "descriptions": entity_data.get("descriptions") or {},
+            "statements": statements,
+        }
+
+    def _extract_labels(self, entity_data: dict) -> dict[str, str]:
         """Extract labels only in preferred languages"""
-        labels = {}
+        labels = entity_data["labels"]
+        return {
+            lang: labels[lang] for lang in WIKIDATA_PREFERRED_LANGS if lang in labels
+        }
 
-        if not entity_data or "labels" not in entity_data:
-            return labels
-
-        # Only extract labels in preferred languages
-        for lang in WIKIDATA_PREFERRED_LANGS:
-            if lang in entity_data["labels"]:
-                label_data = entity_data["labels"][lang]
-                # Handle both v0 and v1 API formats
-                if isinstance(label_data, dict) and "value" in label_data:
-                    # v0 API format: {"en": {"value": "Douglas Adams", "language": "en"}}
-                    labels[lang] = label_data["value"]
-                else:
-                    # v1 API format: {"en": "Douglas Adams"}
-                    labels[lang] = label_data
-
-        return labels
-
-    def _extract_descriptions(self, entity_data):
+    def _extract_descriptions(self, entity_data: dict) -> list[dict[str, str]]:
         """Extract descriptions only in preferred languages"""
-        descriptions = []
+        descriptions = entity_data["descriptions"]
+        return [
+            {"lang": lang, "text": descriptions[lang]}
+            for lang in WIKIDATA_PREFERRED_LANGS
+            if lang in descriptions
+        ]
 
-        if not entity_data or "descriptions" not in entity_data:
-            return descriptions
+    def _extract_property_values(self, entity_data: dict, property_id: str) -> list:
+        """Extract all values of a property"""
+        return entity_data["statements"].get(property_id, [])
 
-        # Extract descriptions only for preferred languages
-        for lang in WIKIDATA_PREFERRED_LANGS:
-            if lang in entity_data["descriptions"]:
-                desc_data = entity_data["descriptions"][lang]
-                # Handle both v0 and v1 API formats
-                if isinstance(desc_data, dict) and "value" in desc_data:
-                    # v0 API format: {"en": {"value": "English writer", "language": "en"}}
-                    text = desc_data["value"]
-                else:
-                    # v1 API format: {"en": "English writer"}
-                    text = desc_data
-
-                descriptions.append({"lang": lang, "text": text})
-
-        return descriptions
-
-    def _extract_property_value(self, entity_data, property_id):
-        """Extract a property value from entity data"""
-        if not entity_data:
-            return None
-
-        # v1 API uses "statements" instead of "claims"
-        claims_key = "statements" if "statements" in entity_data else "claims"
-
-        if claims_key not in entity_data or property_id not in entity_data[claims_key]:
-            return None
-
-        claims = entity_data[claims_key][property_id]
-        if not claims:
-            return None
-
-        # Just get the first value for now - could be expanded for multiple values
-        claim = claims[0]
-
-        # v1 API has a different structure
-        if "value" in claim:
-            return claim["value"]
-
-        # v0 API structure
-        if "mainsnak" not in claim or "datavalue" not in claim["mainsnak"]:
-            return None
-
-        return claim["mainsnak"]["datavalue"].get("value")
-
-    def _extract_property_values(self, entity_data, property_id):
-        """Extract all property values from entity data (returns list)"""
-        if not entity_data:
-            return []
-
-        # v1 API uses "statements" instead of "claims"
-        claims_key = "statements" if "statements" in entity_data else "claims"
-
-        if claims_key not in entity_data or property_id not in entity_data[claims_key]:
-            return []
-
-        claims = entity_data[claims_key][property_id]
-        if not claims:
-            return []
-
-        values = []
-        for claim in claims:
-            # v1 API has a different structure
-            if "value" in claim:
-                values.append(claim["value"])
-            # v0 API structure
-            elif "mainsnak" in claim and "datavalue" in claim["mainsnak"]:
-                value = claim["mainsnak"]["datavalue"].get("value")
-                if value:
-                    values.append(value)
-
-        return values
-
-    def _extract_string_list(self, entity_data, property_id):
-        """Extract a list of strings from property values"""
+    def _extract_property_value(
+        self, entity_data: dict, property_id: str
+    ) -> str | dict | None:
+        """Extract the first value of a property"""
         values = self._extract_property_values(entity_data, property_id)
-        result = []
-        for value in values:
-            if isinstance(value, str):
-                result.append(value)
-            elif isinstance(value, dict):
-                # Handle entity references
-                if "id" in value:
-                    # Could resolve entity labels here if needed
-                    result.append(value["id"])
-                    logger.warning(
-                        f"QID not supported {property_id}:{value['id']} for {self.id_value}"
-                    )
-                elif "text" in value:
-                    result.append(value["text"])
-                elif "content" in value:
-                    result.append(value["content"])
-        return result
+        return values[0] if values else None
 
     def _f_date(self, d: str) -> str:
         # Wikidata pads unknown parts with 00 ("2010-00-00" = year
@@ -510,46 +378,18 @@ class WikiData(AbstractSite):
             d = d[:-3]
         return d
 
-    def _extract_date(self, entity_data, property_id):
-        """Extract a date from property value"""
+    def _extract_date(self, entity_data: dict, property_id: str) -> str | None:
+        """Extract a date from a time property"""
         value = self._extract_property_value(entity_data, property_id)
-        if not value:
+        if not isinstance(value, dict) or not isinstance(value.get("time"), str):
             return None
-        if "content" in value:
-            value = value["content"]
-        if isinstance(value, dict):
-            # Handle time values
-            if "time" in value:
-                # Wikidata time format: +YYYY-MM-DDTHH:MM:SSZ
-                time_str = value["time"]
-                # Extract just the date part
-                if time_str.startswith("+"):
-                    time_str = time_str[1:]
-                if "T" in time_str:
-                    return self._f_date(time_str.split("T")[0])
-                return self._f_date(time_str)
-        elif isinstance(value, str):
-            # Already a string date
-            return self._f_date(value)
+        # Wikidata time format: +YYYY-MM-DDTHH:MM:SSZ
+        return self._f_date(value["time"].removeprefix("+").split("T")[0])
 
-        return None
-
-    def _extract_url(self, entity_data, property_id):
-        """Extract a URL from property value"""
+    def _extract_url(self, entity_data: dict, property_id: str) -> str | None:
+        """Extract a URL from a url or string property"""
         value = self._extract_property_value(entity_data, property_id)
-        if not value:
-            return None
-
-        if isinstance(value, str):
-            return value
-        elif isinstance(value, dict):
-            # Handle different formats
-            if "text" in value:
-                return value["text"]
-            elif "content" in value:
-                return value["content"]
-
-        return None
+        return value if isinstance(value, str) else None
 
     # units of P2047 quantities -> factor to seconds
     _DURATION_UNIT_FACTORS = {
@@ -558,64 +398,23 @@ class WikiData(AbstractSite):
         "Q25235": 3600,  # hour
     }
 
-    def _extract_duration(self, entity_data):
+    def _extract_duration(self, entity_data: dict) -> int | None:
         """Extract duration in seconds from P2047"""
-        value = self._extract_property_value(entity_data, WikidataProperties.P2047)
-        if not value:
+        value = self._extract_property_value(entity_data, WikidataProperties.DURATION)
+        if not isinstance(value, dict) or "amount" not in value:
             return None
+        # Wikidata stores duration as a quantity with a unit URI;
+        # films are usually expressed in minutes
+        unit = str(value.get("unit") or "").split("/")[-1]
+        factor = self._DURATION_UNIT_FACTORS.get(unit, 60)
+        return int(float(value["amount"]) * factor)
 
-        if isinstance(value, dict):
-            # Wikidata stores duration as a quantity with a unit URI;
-            # films are usually expressed in minutes
-            if "amount" in value:
-                unit = str(value.get("unit") or "").split("/")[-1]
-                factor = self._DURATION_UNIT_FACTORS.get(unit, 60)
-                return int(float(value["amount"]) * factor)
-        elif isinstance(value, (int, float)):
-            # unit unknown; assume minutes like most film data
-            return int(value) * 60
+    def _extract_entity_types(self, entity_data: dict, property_id: str) -> list[str]:
+        """Extract the QIDs of a wikibase-item property, e.g. P31 or P279"""
+        return self._extract_property_values(entity_data, property_id)
 
-        return None
-
-    def _extract_entity_types(self, entity_data, property_id):
-        """Extract entity types (instance of or subclass of) from a property"""
-        type_values = []
-
-        # Get the appropriate key based on API version
-        claims_key = "statements" if "statements" in entity_data else "claims"
-
-        # Check if the property exists
-        if claims_key in entity_data and property_id in entity_data[claims_key]:
-            claims = entity_data[claims_key][property_id]
-            # Extract all values
-            for claim in claims:
-                # Handle different API formats (v0 vs v1)
-                if "value" in claim:
-                    # v1 API format
-                    if isinstance(claim["value"], dict):
-                        if "id" in claim["value"]:
-                            type_values.append(claim["value"]["id"])
-                        elif "content" in claim["value"]:
-                            type_values.append(claim["value"]["content"])
-                elif "mainsnak" in claim and "datavalue" in claim["mainsnak"]:
-                    # v0 API format
-                    datavalue = claim["mainsnak"]["datavalue"]
-                    if isinstance(
-                        datavalue.get("value"), dict
-                    ) and "id" in datavalue.get("value", {}):
-                        type_values.append(datavalue["value"]["id"])
-
-        return type_values
-
-    def _determine_model_from_entity_types(self, entity_types, entity_id):
-        """Map entity types to appropriate model using a mapping dictionary with prioritization
-
-        Special case: TV_SPECIAL takes precedence over other types when an entity has multiple types.
-        """
-        if not entity_types:
-            return None
-
-        # Check priority types first
+    def _match_entity_types(self, entity_types: list[str]) -> type[Item] | None:
+        """Map entity types to a model, letting priority types win over order"""
         for priority_type in self.PRIORITY_TYPES:
             if (
                 priority_type in entity_types
@@ -623,170 +422,136 @@ class WikiData(AbstractSite):
             ):
                 return self.TYPE_TO_MODEL_MAP[priority_type]
 
-        # Look for any matching type
         for entity_type in entity_types:
-            if entity_type in self.TYPE_TO_MODEL_MAP:
-                return self.TYPE_TO_MODEL_MAP[entity_type]
+            model = self.TYPE_TO_MODEL_MAP.get(entity_type)
+            if model:
+                return model
 
         return None
 
-    def _fetch_parent_types(self, entity_data):
-        """Fetch the parent types (subclass of) values from entity data"""
-        return self._extract_entity_types(entity_data, WikidataProperties.P279)
-
-    def _fetch_parent_types_with_api(self, entity_types, max_depth=1, current_depth=0):
-        """Fetch parent types (subclass of) for given entity types using API calls
-
-        This makes API calls to Wikidata for each entity type to find their parent classes.
-        Supports recursive lookup up to max_depth levels.
-
-        Args:
-            entity_types: List of entity type IDs to look up
-            max_depth: Maximum recursion depth for parent lookup
-            current_depth: Current recursion depth (internal use)
-
-        Returns:
-            List of parent type IDs
-        """
-        if not entity_types or current_depth >= max_depth:
-            return []
-
-        parent_types = []
-        # Use a set to avoid duplicate API calls
-        processed_types = set()
-
-        for entity_type in entity_types:
-            if entity_type in processed_types:
-                continue
-
-            processed_types.add(entity_type)
-
-            # Fetch entity data for this type via API
-            type_entity_data = self._fetch_entity_by_id(entity_type)
-            if not type_entity_data:
-                continue
-
-            # Extract subclass of values
-            direct_parent_types = self._extract_entity_types(
-                type_entity_data, WikidataProperties.P279
-            )
-            parent_types.extend(direct_parent_types)
-
-            # Recursively fetch parent types of parent types if needed
-            if current_depth < max_depth - 1 and direct_parent_types:
-                recursive_parent_types = self._fetch_parent_types_with_api(
-                    direct_parent_types, max_depth, current_depth + 1
-                )
-                parent_types.extend(recursive_parent_types)
-
-        # Return unique parent types
-        return list(set(parent_types))
-
-    def _determine_entity_type(self, entity_data):
-        """Determine the type of entity and appropriate model based on properties
-
-        Uses a multi-level approach to determine the appropriate model:
-        1. Direct 'instance of' (P31) values
-        2. Direct 'subclass of' (P279) values from the entity
-        3. Parent types of instance classes via API lookup (when needed)
-        4. Recursive parent lookup up to a configurable depth
-        """
-        # Extract 'instance of' (P31) values
-        instance_of_values = self._extract_entity_types(
-            entity_data, WikidataProperties.P31
+    def _match_ancestor_types(self, entity_types: list[str]) -> type[Item] | None:
+        """Map ancestor types, ignoring the ones too generic to tell a category"""
+        return self._match_entity_types(
+            [t for t in entity_types if t not in self.AMBIGUOUS_ANCESTOR_TYPES]
         )
 
-        if not instance_of_values:
+    def _fetch_parent_types(self, class_id: str) -> list[str]:
+        """Fetch the 'subclass of' values of a class item
+
+        A class that cannot be fetched is skipped rather than fatal, and is not
+        cached, so a later import may still resolve it.
+        """
+        cached = _PARENT_TYPE_CACHE.get(class_id)
+        if cached is not None:
+            return cached
+
+        try:
+            entity_data = self._fetch_entity_by_id(class_id)
+        except DownloadError as e:
+            logger.warning(f"Unable to fetch Wikidata class {class_id}: {e}")
+            return []
+        if not entity_data:
+            return []
+
+        parent_types = self._extract_entity_types(
+            self._normalize_entity(entity_data), WikidataProperties.SUBCLASS_OF
+        )
+        _PARENT_TYPE_CACHE[class_id] = parent_types
+        return parent_types
+
+    def _walk_ancestor_types(
+        self, instance_of: list[str], subclass_of: list[str]
+    ) -> type[Item] | None:
+        """Find the nearest mapped ancestor, walking 'subclass of' level by level
+
+        The entity's own 'subclass of' values are the first candidates; its
+        'instance of' values only seed the walk, having already failed to match.
+        The nearest level wins, and within a level the priority types do.
+        """
+        model = self._match_ancestor_types(subclass_of)
+        if model:
+            return model
+
+        frontier = subclass_of + [t for t in instance_of if t not in subclass_of]
+        visited = set(frontier)
+        for _ in range(self.MAX_DEPTH):
+            parent_types: list[str] = []
+            for class_id in frontier:
+                for parent_type in self._fetch_parent_types(class_id):
+                    if parent_type not in visited:
+                        visited.add(parent_type)
+                        parent_types.append(parent_type)
+            if not parent_types:
+                return None
+            model = self._match_ancestor_types(parent_types)
+            if model:
+                return model
+            frontier = parent_types
+
+        return None
+
+    def _determine_entity_type(self, entity_data: dict) -> type[Item]:
+        """Determine the model for an entity from its type properties
+
+        Direct 'instance of' (P31) values decide first, ambiguous ones included;
+        failing that, the subclass graph above the entity is walked up to its
+        nearest mapped ancestor.
+        """
+        instance_of = self._extract_entity_types(
+            entity_data, WikidataProperties.INSTANCE_OF
+        )
+        if not instance_of:
             raise ParseError(
                 self, f"Entity {self.id_value} has no 'instance of' (P31) properties"
             )
 
-        # Try to determine model based on instance of values
-        model = self._determine_model_from_entity_types(
-            instance_of_values, self.id_value
+        model = self._match_entity_types(instance_of) or self._walk_ancestor_types(
+            instance_of,
+            self._extract_entity_types(entity_data, WikidataProperties.SUBCLASS_OF),
         )
         if model:
             return model
 
-        # If no model found from instance_of, try to look up direct parent classes
-        direct_parent_types = self._fetch_parent_types(entity_data)
-        if direct_parent_types:
-            parent_model = self._determine_model_from_entity_types(
-                direct_parent_types, self.id_value
-            )
-            if parent_model:
-                return parent_model
-
-        # If still no match, try to fetch parent types of instance classes via API
-        # This handles the case where an entity is an instance of a class that is a subclass of a known type
-        instance_parent_types = self._fetch_parent_types_with_api(
-            instance_of_values, max_depth=2
-        )
-        if instance_parent_types:
-            instance_parent_model = self._determine_model_from_entity_types(
-                instance_parent_types, self.id_value
-            )
-            if instance_parent_model:
-                return instance_parent_model
-
-        # If we still don't have a match, try recursive parent lookup on direct parent types
-        if direct_parent_types:
-            recursive_parent_types = self._fetch_parent_types_with_api(
-                direct_parent_types, max_depth=3
-            )
-            if recursive_parent_types:
-                recursive_model = self._determine_model_from_entity_types(
-                    recursive_parent_types, self.id_value
-                )
-                if recursive_model:
-                    return recursive_model
-
         logger.error(
-            f"Entity has unsupported type(s): {', '.join(instance_of_values)}",
+            f"Entity has unsupported type(s): {', '.join(instance_of)}",
             extra={"qid": self.id_value},
         )
         raise ParseError(
             self,
-            f"Entity has unsupported type(s): {', '.join(instance_of_values)}",
+            f"Entity has unsupported type(s): {', '.join(instance_of)}",
         )
 
-    def _extract_cover_image(self, entity_data):
+    def _extract_cover_image(self, entity_data: dict) -> str | None:
         """Extract cover image URL from P18 (image) property"""
-        if not entity_data:
+        filename = self._extract_property_value(entity_data, WikidataProperties.IMAGE)
+        if not isinstance(filename, str):
             return None
 
-        # P18 is the Wikidata property for images
-        image_value = self._extract_property_value(entity_data, "P18")
-        if not image_value:
-            return None
-
-        # Extract the filename - handle different API versions
-        if isinstance(image_value, dict):
-            # v0 API format may have nested structure
-            filename = image_value.get("text", None) or image_value.get("content", None)
-        else:
-            # v1 API might return the filename directly as string
-            filename = image_value
-
-        if not filename:
-            return None
-
-        # For Commons images, we need to construct the URL from the filename
-        # Format: https://commons.wikimedia.org/wiki/Special:FilePath/{filename}?width=1000
-        # This special URL will redirect to the actual image with the specified width
+        # Special:FilePath redirects to the Commons image at the requested width
         return f"https://commons.wikimedia.org/wiki/Special:FilePath/{quote(filename)}?width=1000"
+
+    def _fallback_label(self, entity_data: dict) -> dict[str, str]:
+        """Pick one label outside the preferred languages, English first"""
+        labels = entity_data["labels"]
+        lang = "en" if "en" in labels else next(iter(labels), None)
+        return {lang: labels[lang]} if lang else {}
 
     def scrape(self) -> ResourceContent:
         if not self.id_value or not self.id_value.startswith("Q"):
             raise ParseError(self, "QID")
         entity_data = self._fetch_entity_by_id(self.id_value)
 
-        if not isinstance(entity_data, dict) or entity_data.get("id") != self.id_value:
+        if not isinstance(entity_data, dict) or not entity_data.get("id"):
             raise ParseError(self, "json")
+        if entity_data["id"] != self.id_value:
+            # a merged QID redirects to the item it was merged into; that
+            # payload is what this QID means now
+            logger.info(f"{self.id_value} redirected to {entity_data['id']}")
+        entity_data = self._normalize_entity(entity_data)
 
         # Extract labels (titles)
-        labels = self._extract_labels(entity_data)
-        title = next(iter(labels.values())) if labels else self.id_value
+        labels = self._extract_labels(entity_data) or self._fallback_label(entity_data)
+        title = next(iter(labels.values()), self.id_value)
 
         # Extract descriptions
         descriptions = self._extract_descriptions(entity_data)
@@ -816,155 +581,179 @@ class WikiData(AbstractSite):
 
         # Determine entity type for model
         model = self._determine_entity_type(entity_data)
-        self.DEFAULT_MODEL = model
-
-        # Add preferred_model to metadata
-        if model:
-            data.metadata["preferred_model"] = model.__name__
+        data.metadata["preferred_model"] = model.__name__
 
         # Extract model-specific metadata
-        if model == Game:
-            self._extract_game_metadata(entity_data, data)
-        elif model == Podcast:
-            self._extract_podcast_metadata(entity_data, data)
-        elif model == PodcastEpisode:
-            self._extract_podcast_episode_metadata(entity_data, data)
-        elif model == Performance:
-            self._extract_performance_metadata(entity_data, data)
-        elif model == Movie:
-            self._extract_movie_metadata(entity_data, data)
-        elif model == TVShow:
-            self._extract_tv_show_metadata(entity_data, data)
-        elif model == TVSeason:
-            self._extract_tv_season_metadata(entity_data, data)
-        elif model == TVEpisode:
-            self._extract_tv_episode_metadata(entity_data, data)
-        elif model == Work:
-            self._extract_work_metadata(entity_data, data)
-        elif model == People:
-            self._extract_people_metadata(entity_data, data)
+        extractor = {
+            Album: self._extract_album_metadata,
+            Game: self._extract_game_metadata,
+            Podcast: self._extract_podcast_metadata,
+            PodcastEpisode: self._extract_podcast_episode_metadata,
+            Performance: self._extract_performance_metadata,
+            Movie: self._extract_movie_metadata,
+            TVShow: self._extract_tv_show_metadata,
+            TVSeason: self._extract_tv_season_metadata,
+            TVEpisode: self._extract_tv_episode_metadata,
+            Work: self._extract_work_metadata,
+            People: self._extract_people_metadata,
+        }.get(model)
+        if extractor:
+            extractor(entity_data, data)
 
-        resources = self._extract_external_ids(entity_data)
-        prematched_resources = []
-        for res in resources:
+        for res in self._extract_external_ids(entity_data):
             try:
                 site_cls = SiteManager.get_site_cls_by_id_type(res["id_type"])
-                if (
-                    model == site_cls.DEFAULT_MODEL
-                    or model in site_cls.MATCHABLE_MODELS
-                ):
-                    prematched_resources.append(res)
-                    data.lookup_ids[res["id_type"]] = res["id_value"]
-                else:
-                    logger.warning(
-                        f"IdType {res['id_type']} does not match Model {model}, skipping",
-                        extra={
-                            "id_type": self.ID_TYPE,
-                            "id_value": self.id_value,
-                            "prematched": res,
-                        },
-                    )
-            except Exception:
+            except ValueError:
                 # No registered site for this IdType; still store the lookup ID
                 data.lookup_ids[res["id_type"]] = res["id_value"]
-        # data.metadata["prematched_resources"] = prematched_resources
+                continue
+            if model == site_cls.DEFAULT_MODEL or model in site_cls.MATCHABLE_MODELS:
+                data.lookup_ids[res["id_type"]] = res["id_value"]
+            else:
+                logger.warning(
+                    f"IdType {res['id_type']} does not match Model {model}, skipping",
+                    extra={
+                        "id_type": self.ID_TYPE,
+                        "id_value": self.id_value,
+                        "resource": res,
+                    },
+                )
         return data
+
+    # P31 class -> Album.album_type slug (ALBUM_TYPE_CATALOG)
+    _ALBUM_TYPE_BY_CLASS = {
+        WikidataTypes.MUSIC_ALBUM: "album",
+        WikidataTypes.MUSIC_SINGLE: "single",
+        WikidataTypes.MUSIC_EP: "ep",
+        "Q208569": "album",  # studio album
+        "Q209939": "live",  # live album
+        "Q222910": "compilation",  # compilation album
+        "Q723849": "compilation",  # greatest hits album
+        "Q4176708": "soundtrack",  # soundtrack album
+        "Q1892995": "mixtape",  # mixtape
+        "Q963099": "remix",  # remix album
+        "Q220935": "demo",  # demo
+        "Q107154516": "ep",  # mini album
+        "Q106042566": "single",  # single album
+    }
+
+    def _extract_album_metadata(self, entity_data, data):
+        """Extract Album-specific metadata"""
+        data.metadata["release_date"] = self._extract_date(
+            entity_data, WikidataProperties.PUBLICATION_DATE
+        )
+        data.metadata["length"] = self._extract_duration(entity_data)
+        types = self._extract_entity_types(entity_data, WikidataProperties.INSTANCE_OF)
+        data.metadata["album_type"] = list(
+            dict.fromkeys(
+                self._ALBUM_TYPE_BY_CLASS[t]
+                for t in types
+                if t in self._ALBUM_TYPE_BY_CLASS
+            )
+        )
+        # performer, record label and genre are entity references,
+        # unusable until labels are resolved
+        data.metadata["artist"] = []
 
     def _extract_game_metadata(self, entity_data, data):
         """Extract Game-specific metadata"""
         data.metadata["release_date"] = self._extract_date(
-            entity_data, WikidataProperties.P577
+            entity_data, WikidataProperties.PUBLICATION_DATE
         )
         data.metadata["artist"] = []  # No direct Wikidata property for artist
         data.metadata["official_site"] = self._extract_url(
-            entity_data, WikidataProperties.P856
+            entity_data, WikidataProperties.OFFICIAL_WEBSITE
         )
 
     def _extract_podcast_metadata(self, entity_data, data):
         """Extract Podcast-specific metadata"""
         data.metadata["official_site"] = self._extract_url(
-            entity_data, WikidataProperties.P856
+            entity_data, WikidataProperties.OFFICIAL_WEBSITE
         )
 
         # RSS feed URL
-        feed_url = self._extract_url(entity_data, WikidataProperties.P953)
+        feed_url = self._extract_url(
+            entity_data, WikidataProperties.WORK_AVAILABLE_AT_URL
+        )
         if feed_url:
-            data.lookup_ids["rss"] = feed_url
+            data.lookup_ids[IdType.RSS] = feed_url
 
     def _extract_podcast_episode_metadata(self, entity_data, data):
         """Extract PodcastEpisode-specific metadata"""
         data.metadata["pub_date"] = self._extract_date(
-            entity_data, WikidataProperties.P577
+            entity_data, WikidataProperties.PUBLICATION_DATE
         )
         data.metadata["length"] = self._extract_duration(entity_data)
         data.metadata["guid"] = self._extract_property_value(
-            entity_data, WikidataProperties.P433
+            entity_data, WikidataProperties.ISSUE_NUMBER
         )
         data.metadata["media_url"] = self._extract_url(
-            entity_data, WikidataProperties.P953
+            entity_data, WikidataProperties.WORK_AVAILABLE_AT_URL
         )
-        data.metadata["link"] = self._extract_url(entity_data, WikidataProperties.P856)
+        data.metadata["link"] = self._extract_url(
+            entity_data, WikidataProperties.OFFICIAL_WEBSITE
+        )
 
     def _extract_performance_metadata(self, entity_data, data):
         """Extract Performance-specific metadata"""
         data.metadata["opening_date"] = self._extract_date(
-            entity_data, WikidataProperties.P577
+            entity_data, WikidataProperties.PUBLICATION_DATE
         )
         data.metadata["closing_date"] = self._extract_date(
-            entity_data, WikidataProperties.P582
+            entity_data, WikidataProperties.END_TIME
         )
         data.metadata["official_site"] = self._extract_url(
-            entity_data, WikidataProperties.P856
+            entity_data, WikidataProperties.OFFICIAL_WEBSITE
         )
         data.metadata["crew"] = []
 
     def _extract_movie_metadata(self, entity_data, data):
         """Extract Movie-specific metadata"""
         data.metadata["release_date"] = self._extract_date(
-            entity_data, WikidataProperties.P577
+            entity_data, WikidataProperties.PUBLICATION_DATE
         )
 
     def _extract_tv_show_metadata(self, entity_data, data):
         """Extract TVShow-specific metadata"""
         data.metadata["first_air_date"] = self._extract_date(
-            entity_data, WikidataProperties.P577
+            entity_data, WikidataProperties.PUBLICATION_DATE
         )
         data.metadata["last_air_date"] = self._extract_date(
-            entity_data, WikidataProperties.P582
+            entity_data, WikidataProperties.END_TIME
         )
         data.metadata["number_of_episodes"] = self._extract_property_value(
-            entity_data, WikidataProperties.P1113
+            entity_data, WikidataProperties.NUMBER_OF_EPISODES
         )
         data.metadata["number_of_seasons"] = self._extract_property_value(
-            entity_data, WikidataProperties.P2437
+            entity_data, WikidataProperties.NUMBER_OF_SEASONS
         )
 
     def _extract_tv_season_metadata(self, entity_data, data):
         """Extract TVSeason-specific metadata"""
         data.metadata["first_air_date"] = self._extract_date(
-            entity_data, WikidataProperties.P577
+            entity_data, WikidataProperties.PUBLICATION_DATE
         )
         data.metadata["last_air_date"] = self._extract_date(
-            entity_data, WikidataProperties.P582
+            entity_data, WikidataProperties.END_TIME
         )
         data.metadata["number_of_episodes"] = self._extract_property_value(
-            entity_data, WikidataProperties.P1113
+            entity_data, WikidataProperties.NUMBER_OF_EPISODES
         )
 
     def _extract_tv_episode_metadata(self, entity_data, data):
         """Extract TVEpisode-specific metadata"""
         data.metadata["air_date"] = self._extract_date(
-            entity_data, WikidataProperties.P577
+            entity_data, WikidataProperties.PUBLICATION_DATE
         )
         data.metadata["episode_number"] = self._extract_property_value(
-            entity_data, WikidataProperties.P433
+            entity_data, WikidataProperties.ISSUE_NUMBER
         )
         data.metadata["length"] = self._extract_duration(entity_data)
 
     def _extract_work_metadata(self, entity_data, data):
         """Extract Work (Book/Literary work)-specific metadata"""
         data.metadata["publication_date"] = self._extract_date(
-            entity_data, WikidataProperties.P577
+            entity_data, WikidataProperties.PUBLICATION_DATE
         )
 
     _ORGANIZATION_TYPES = {
@@ -986,35 +775,34 @@ class WikiData(AbstractSite):
         data.metadata["localized_bio"] = data.metadata.pop("localized_description", [])
         # Determine people_type from entity types
         instance_types = set(
-            self._extract_entity_types(entity_data, WikidataProperties.P31)
+            self._extract_entity_types(entity_data, WikidataProperties.INSTANCE_OF)
         )
         if instance_types & self._ORGANIZATION_TYPES:
             data.metadata["people_type"] = "organization"
         data.metadata["birth_date"] = self._extract_date(
-            entity_data, WikidataProperties.P569
+            entity_data, WikidataProperties.DATE_OF_BIRTH
         )
         data.metadata["death_date"] = self._extract_date(
-            entity_data, WikidataProperties.P570
+            entity_data, WikidataProperties.DATE_OF_DEATH
         )
         data.metadata["official_site"] = self._extract_url(
-            entity_data, WikidataProperties.P856
+            entity_data, WikidataProperties.OFFICIAL_WEBSITE
         )
 
-    def get_wikipedia_pages(self, entity_data=None):
+    def get_wikipedia_pages(self) -> list[dict[str, str]]:
         """Fetch all Wikipedia pages for this Wikidata entity
 
-        Returns a dictionary of language codes to Wikipedia page URLs.
+        Returns one {"lang", "url", "title"} dict per Wikipedia sitelink.
 
-        Example: {
-            "en": "https://en.wikipedia.org/wiki/The_Matrix",
-            "zh": "https://zh.wikipedia.org/wiki/黑客帝国",
+        Example: [
+            {"lang": "en", "url": "https://en.wikipedia.org/wiki/The_Matrix",
+             "title": "The Matrix"},
             ...
-        }
+        ]
         """
-        if not entity_data and not self.id_value:
-            return {}
-
         entity_id = self.id_value
+        if not entity_id:
+            return []
 
         try:
             # Use Wikidata API to get all sitelinks (Wikipedia pages)
@@ -1025,12 +813,12 @@ class WikiData(AbstractSite):
 
             if "entities" not in data or entity_id not in data["entities"]:
                 logger.warning(f"No entity data found for {entity_id}")
-                return {}
+                return []
 
             entity = data["entities"][entity_id]
             if "sitelinks" not in entity:
                 logger.warning(f"No sitelinks found for {entity_id}")
-                return {}
+                return []
 
             # Extract Wikipedia pages
             wiki_pages = []
@@ -1049,21 +837,24 @@ class WikiData(AbstractSite):
                 f"Error fetching Wikipedia pages: {e}",
                 extra={"QID": entity_id, "exception": e},
             )
-            return {}
+            return []
 
-    def _extract_external_ids(self, entity_data):
+    def _extract_external_ids(self, entity_data: dict) -> list[dict]:
         """Extract common external identifiers to lookup_ids"""
         resources = []
         for property_id, id_type in WikidataProperties.IdTypeMapping.items():
             value = self._extract_property_value(entity_data, property_id)
-            if value:
-                # Handle both v0 and v1 API formats
-                if isinstance(value, dict):
-                    value = value.get("content") or value.get("text")
-                if id_type in [IdType.OpenLibrary, IdType.OpenLibrary_Work]:
-                    id_type = OpenLibrary.guess_id_type(value)
-                resources.append({"id_type": id_type, "id_value": value})
+            if not value:
+                continue
+            if id_type in [IdType.OpenLibrary, IdType.OpenLibrary_Work]:
+                id_type = OpenLibrary.guess_id_type(value)
+            resources.append({"id_type": id_type, "id_value": value})
         return resources
+
+    @staticmethod
+    def _escape_sparql_string(value: str) -> str:
+        """Escape a value for use inside a double-quoted SPARQL literal"""
+        return value.replace("\\", "\\\\").replace('"', '\\"')
 
     @classmethod
     def lookup_qid_by_external_id(cls, id_type: IdType, id_value: str) -> str | None:
@@ -1104,7 +895,7 @@ class WikiData(AbstractSite):
             # Use SPARQL query to find entity with this external ID
             sparql_query = f"""
             SELECT ?item WHERE {{
-                ?item wdt:{property_id} "{id_value}".
+                ?item wdt:{property_id} "{cls._escape_sparql_string(id_value)}".
             }}
             LIMIT 1
             """
