@@ -250,13 +250,13 @@ class TestCreditDisplayNameLocalization:
     display once Item.attach_localized_credit_names has run, instead of the
     snapshot frozen at sync time. attach_localized_credit_names fetches only the
     localized_name JSON sub-key in one bounded query -- never the heavy person
-    metadata blob (EGGPLANT-1EF) and never a per-credit query. Canonical
-    surfaces (credit_names_by_role, which feeds ap_object / backups / schema.org
-    / import matching) always keep the snapshot.
+    metadata blob (EGGPLANT-1EF) and never a per-credit query. Surfaces that
+    never attach (ap_object, backups, import matching) keep the snapshot.
 
     Regression: a Douban-sourced movie froze the director credit name in
     Chinese, so the movie page rendered Chinese even for English viewers, while
-    the person page (which localizes live) showed English.
+    the person page (which localizes live) showed English. The API reads attach
+    too, so ``api_credits`` must hold the same objects ``role_credits`` does.
     """
 
     def _linked_movie(self, n: int = 1) -> Movie:
@@ -304,8 +304,8 @@ class TestCreditDisplayNameLocalization:
             assert self._localized_director(m).display_name == "吉尔莫·德尔·托罗"
 
     def test_without_attach_display_name_is_frozen_and_issues_no_query(self):
-        # Surfaces that don't call attach (cards/lists/API) keep the snapshot,
-        # and display_name must never trigger a query on its own.
+        # Surfaces that don't call attach (cards/lists) keep the snapshot, and
+        # display_name must never trigger a query on its own.
         base = self._linked_movie()
         with translation.override("en"):
             m = Movie.objects.get(pk=base.pk)
@@ -315,13 +315,48 @@ class TestCreditDisplayNameLocalization:
                 assert credit.display_name == "吉尔莫·德尔·托罗"
             assert len(ctx) == 0
 
-    def test_credit_names_by_role_stays_canonical(self):
-        # ap_object / backups / schema.org / import matching must not localize.
+    def test_attach_reaches_api_credits(self):
+        # api_credits feeds CreditSchema.name, so it must share objects with
+        # role_credits, prefetched or not.
+        base = self._linked_movie()
+        with translation.override("en"):
+            m = Movie.objects.get(pk=base.pk)
+            Item.attach_localized_credit_names([m])
+            assert [c.display_name for c in m.api_credits] == ["Guillermo del Toro"]
+            m = Movie.objects.get(pk=base.pk)
+            prefetch_related_objects([m], Item.credits_prefetch())
+            Item.attach_localized_credit_names([m])
+            assert [c.display_name for c in m.api_credits] == ["Guillermo del Toro"]
+
+    def test_ap_object_keeps_snapshot(self):
+        # ap_object never attaches: activity+json and backups keep the snapshot.
+        base = self._linked_movie()
+        for lang in ("en", "zh-hans"):
+            with translation.override(lang):
+                m = Movie.objects.get(pk=base.pk)
+                assert [c["name"] for c in m.ap_object["credits"]] == [
+                    "吉尔莫·德尔·托罗"
+                ]
+
+    def test_credit_names_by_role_without_attach_stays_canonical(self):
+        # ap_object / backups / import matching never attach: no localization.
         base = self._linked_movie()
         for lang in ("en", "zh-hans"):
             with translation.override(lang):
                 m = Movie.objects.get(pk=base.pk)
                 assert m.credit_names_by_role("director") == ["吉尔莫·德尔·托罗"]
+
+    def test_credit_names_by_role_follows_attach(self):
+        # The per-role schema fields and schema.org markup must agree with the
+        # localized credits beside them.
+        base = self._linked_movie()
+        with translation.override("en"):
+            m = Movie.objects.get(pk=base.pk)
+            Item.attach_localized_credit_names([m])
+            assert m.credit_names_by_role("director") == ["Guillermo del Toro"]
+            assert m.to_schema_org()["director"] == [
+                {"@type": "Person", "name": "Guillermo del Toro"}
+            ]
 
     def test_attach_uses_single_query_regardless_of_cast_size(self):
         # One bounded query for all credited people -- flat, not an N+1, and it
