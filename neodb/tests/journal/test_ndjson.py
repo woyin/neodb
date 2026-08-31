@@ -3,6 +3,7 @@ import os
 import zipfile
 from io import BytesIO
 from tempfile import TemporaryDirectory
+from unittest import mock
 
 import pytest
 from django.conf import settings
@@ -16,6 +17,7 @@ from PIL import Image
 
 from catalog.models import (
     Edition,
+    ExternalResource,
     IdType,
     Movie,
     Podcast,
@@ -1220,6 +1222,216 @@ class TestNdjsonExportImport:
         importer = NdjsonImporter.create(user=self.user2, file="x.zip", visibility=0)
         importer.parse_catalog(str(path))
         assert importer.items.get(self.book1.absolute_url) == self.book1
+
+    @staticmethod
+    def _write_catalog(path, *entries) -> None:
+        """Write a catalog.ndjson holding `entries`, header included."""
+        path.write_text(
+            "\n".join([json.dumps({"server": "x"})] + [json.dumps(e) for e in entries])
+            + "\n"
+        )
+
+    def _parse_catalog(self, tmp_path, *entries) -> NdjsonImporter:
+        path = tmp_path / "catalog.ndjson"
+        self._write_catalog(path, *entries)
+        importer = NdjsonImporter.create(user=self.user2, file="x.zip", visibility=0)
+        importer.parse_catalog(str(path))
+        return importer
+
+    def test_ndjson_catalog_rebuilds_item_from_bundled_metadata(self, tmp_path):
+        """Every link failed, so the bundled entry itself becomes the item.
+
+        A gone source server (the .invalid host never resolves) used to
+        strand every journal record referencing its items.
+        """
+        entry = {
+            "id": "https://gone-rebuild.invalid/movie/aabbcc",
+            "type": "Movie",
+            "title": "A Lost Film",
+            "localized_title": [{"lang": "en", "text": "A Lost Film"}],
+            "localized_description": [{"lang": "en", "text": "Nowhere to fetch."}],
+            "director": ["Someone"],
+            "external_resources": [
+                {"url": "https://gone-rebuild.invalid/movie/aabbcc"}
+            ],
+        }
+        before = Movie.objects.count()
+        importer = self._parse_catalog(tmp_path, entry)
+        item = importer.items[entry["id"]]
+        assert isinstance(item, Movie)
+        assert item.display_title == "A Lost Film"
+        assert item.director == ["Someone"]
+        assert Movie.objects.count() == before + 1
+
+        # the dead url still fails every lookup, so reimporting rebuilds
+        # again and has to land on the same item
+        again = self._parse_catalog(tmp_path, entry)
+        assert again.items[entry["id"]] == item
+        assert Movie.objects.count() == before + 1
+
+    def test_ndjson_catalog_rebuild_matches_existing_item_by_id(self, tmp_path):
+        """The bundled ids dedup against this catalog instead of duplicating.
+
+        parse_catalog passed no info string, so a bundled isbn/imdb used to
+        be ignored entirely.
+        """
+        before = Edition.objects.count()
+        entry = {
+            "id": "https://gone-dedup.invalid/book/ddeeff",
+            "type": "Edition",
+            "localized_title": [{"lang": "en", "text": "Hyperion"}],
+            "isbn": self.book1.isbn,
+            "external_resources": [],
+        }
+        importer = self._parse_catalog(tmp_path, entry)
+        assert importer.items[entry["id"]] == self.book1
+        assert Edition.objects.count() == before
+
+    def test_ndjson_catalog_rebuild_never_edits_an_existing_item(self):
+        """An archive must not rewrite catalog items it merely matches.
+
+        match_and_link_item would merge the bundled metadata into whatever it
+        matched, and is_protected guards the edit form, not this path.
+        """
+        self.movie1.is_protected = True
+        self.movie1.save()
+        titles_before = list(self.movie1.localized_title)
+        descriptions_before = list(self.movie1.localized_description)
+        before = Movie.objects.count()
+
+        importer = NdjsonImporter.create(user=self.user2, file="x.zip", visibility=0)
+        item = importer.create_item_from_catalog_data(
+            {
+                "id": "https://gone-merge.invalid/movie/x",
+                "type": "Movie",
+                "imdb": self.movie1.imdb,
+                "localized_title": [{"lang": "en", "text": "Bogus Injected Title"}],
+                "localized_description": [{"lang": "en", "text": "Injected."}],
+            }
+        )
+        assert item == self.movie1
+        assert Movie.objects.count() == before
+        self.movie1.refresh_from_db()
+        assert self.movie1.localized_title == titles_before
+        assert self.movie1.localized_description == descriptions_before
+
+    def test_ndjson_catalog_rebuild_skips_blocked_peers(self, tmp_path):
+        """An archive is not a way around a defederated instance.
+
+        Building the site directly skips validate_url_fallback, where the
+        blocked-peer list is enforced.
+        """
+        before = Movie.objects.count()
+        entry = {
+            "id": "https://blocked-peer.invalid/movie/x",
+            "type": "Movie",
+            "localized_title": [{"lang": "en", "text": "From A Blocked Peer"}],
+        }
+        with mock.patch.object(
+            Takahe, "get_blocked_peers", return_value=["blocked-peer.invalid"]
+        ):
+            importer = self._parse_catalog(tmp_path, entry)
+        assert importer.items[entry["id"]] is None
+        assert Movie.objects.count() == before
+
+    def test_ndjson_catalog_rebuild_leaves_nothing_behind_on_bad_metadata(
+        self, tmp_path
+    ):
+        """A failure part-way through the build must not leave a half-built item.
+
+        The Item is saved before it is validated, so anything raising after
+        that stranded an item-less row, one more per reimport. The patched
+        sync_credits_from_metadata stands in for any such post-save step.
+        """
+        before = Movie.objects.count()
+        resources_before = ExternalResource.objects.count()
+        entry = {
+            "id": "https://gone-badshape.invalid/movie/x",
+            "type": "Movie",
+            "localized_title": [{"lang": "en", "text": "Malformed"}],
+        }
+        with mock.patch.object(
+            Movie, "sync_credits_from_metadata", side_effect=ValueError("boom")
+        ):
+            importer = self._parse_catalog(tmp_path, entry)
+        assert importer.items[entry["id"]] is None
+        assert Movie.objects.count() == before
+        assert ExternalResource.objects.count() == resources_before
+
+    def test_ndjson_catalog_rebuild_needs_sufficient_metadata(self, tmp_path):
+        """Entries too thin to build from stay unresolved rather than half-built."""
+        no_title = {"id": "https://gone-a.invalid/book/1", "type": "Edition"}
+        unsupported = {
+            "id": "https://gone-b.invalid/p/1",
+            "type": "People",
+            "localized_title": [{"lang": "en", "text": "Someone"}],
+        }
+        bad_url = {
+            "id": "not a url at all",
+            "type": "Edition",
+            "localized_title": [{"lang": "en", "text": "Nowhere"}],
+        }
+        importer = self._parse_catalog(tmp_path, no_title, unsupported, bad_url)
+        assert importer.items[no_title["id"]] is None
+        assert importer.items[unsupported["id"]] is None
+        assert importer.items[bad_url["id"]] is None
+
+    def test_ndjson_catalog_rebuild_skips_local_urls(self, tmp_path):
+        """A local url that did not resolve is a deleted item, not a new one."""
+        before = Movie.objects.count()
+        entry = {
+            "id": settings.SITE_INFO["site_url"] + "/movie/nosuchitem",
+            "type": "Movie",
+            "localized_title": [{"lang": "en", "text": "Deleted Locally"}],
+        }
+        importer = self._parse_catalog(tmp_path, entry)
+        assert importer.items[entry["id"]] is None
+        assert Movie.objects.count() == before
+
+    def test_ndjson_marks_import_against_a_rebuilt_item(self, tmp_path):
+        """End to end: a mark on an unfetchable item still imports.
+
+        This is the failure the rebuild exists to fix -- the mark used to be
+        counted as failed with "Could not find item".
+        """
+        url = "https://gone-marks.invalid/book/xyz"
+        catalog = tmp_path / "catalog.ndjson"
+        self._write_catalog(
+            catalog,
+            {
+                "id": url,
+                "type": "Edition",
+                "localized_title": [{"lang": "en", "text": "Vanished Volume"}],
+                "author": ["Nobody"],
+                "external_resources": [],
+            },
+        )
+        journal = tmp_path / "journal.ndjson"
+        journal.write_text(
+            json.dumps({"server": "x"})
+            + "\n"
+            + json.dumps(
+                {
+                    "type": "ShelfMember",
+                    "content": {
+                        "withRegardTo": url,
+                        "status": ShelfType.COMPLETE,
+                        "published": "2021-01-01T00:00:00Z",
+                    },
+                    "visibility": 0,
+                    "metadata": {},
+                }
+            )
+            + "\n"
+        )
+        importer = NdjsonImporter.create(user=self.user2, file="x.zip", visibility=0)
+        importer.parse_catalog(str(catalog))
+        importer.process_journal(str(journal))
+        assert importer.metadata["failed"] == 0
+        assert importer.metadata["imported"] == 1
+        item = importer.items[url]
+        assert item is not None
+        assert Mark(self.user2.identity, item).shelf_type == ShelfType.COMPLETE
 
     def test_ndjson_import_without_published_timestamp(self):
         """created_time is not nullable; a bundle without `published` must

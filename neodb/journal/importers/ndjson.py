@@ -7,14 +7,19 @@ import tempfile
 import uuid
 import zipfile
 from typing import Any, Callable, Dict
+from urllib.parse import urlparse
 
 from django.conf import settings
 from django.core.files import File
 from django.core.files.storage import default_storage
+from django.db import transaction
 from django.utils import timezone
 from loguru import logger
 
-from catalog.models import Item
+from catalog.models import ExternalResource, Item
+from catalog.sites.fedi import FediverseInstance
+from common.models.lang import detect_language
+from common.validators import is_storable_url
 from journal.models import (
     Article,
     Attachment,
@@ -879,6 +884,103 @@ class NdjsonImporter(BaseImporter):
             f"Imported {self.metadata['imported']}, skipped {self.metadata['skipped']}, failed {self.metadata['failed']}"
         )
 
+    @staticmethod
+    def _catalog_localized_title(data: Dict[str, Any]) -> list[dict[str, str]] | None:
+        """The entry's localized_title, or one synthesized from its title.
+
+        None when the entry names the item nowhere: the AP schema validation
+        in create_from_external_resource rejects a nameless item.
+        """
+        titles = [
+            {"lang": t["lang"], "text": t["text"]}
+            for t in data.get("localized_title") or []
+            if isinstance(t, dict) and t.get("lang") and t.get("text")
+        ]
+        if titles:
+            return titles
+        title = data.get("title") or data.get("display_title")
+        if isinstance(title, str) and title.strip():
+            return [{"lang": detect_language(title), "text": title.strip()}]
+        return None
+
+    @staticmethod
+    def _existing_item_for_ids(lookup_ids: Dict[str, str]) -> Item | None:
+        """An item already in this catalog carrying any of these ids."""
+        for id_type, id_value in lookup_ids.items():
+            if not id_value:
+                continue
+            resource = ExternalResource.objects.filter(
+                id_type=id_type, id_value=id_value
+            ).first()
+            if resource and resource.item and not resource.item.is_deleted:
+                return resource.item
+            item = Item.objects.filter(
+                primary_lookup_id_type=id_type, primary_lookup_id_value=id_value
+            ).first()
+            if item and not item.is_deleted:
+                return item
+        return None
+
+    def create_item_from_catalog_data(self, data: Dict[str, Any]) -> Item | None:
+        """Build a catalog item out of the metadata bundled in catalog.ndjson.
+
+        Last resort, once every link in the entry has failed to resolve. The
+        entry is the same payload FediverseInstance would have downloaded, so
+        it is replayed through that path with the fetch skipped. None when the
+        entry is too thin to build from, leaving the caller unchanged.
+        """
+        url = data.get("id")
+        # is_storable_url: a hostname that no longer resolves is the case this
+        # exists for, and nothing here dereferences the url
+        if not isinstance(url, str) or not is_storable_url(url):
+            logger.debug(f"Catalog entry has no usable id: {data.get('id')!r}")
+            return None
+        if FediverseInstance.is_local_item_url(url):
+            # unresolved local url means deleted, not missing
+            logger.debug(f"Not recreating local item {url}")
+            return None
+        # checks validate_url_fallback would have made; building the site
+        # directly skips it
+        host = urlparse(url).hostname or ""
+        if host in Takahe.get_blocked_peers():
+            logger.debug(f"Not recreating item from blocked peer {host}")
+            return None
+        typ = data.get("type")
+        if not isinstance(typ, str) or typ.lower() not in (
+            FediverseInstance.supported_types
+        ):
+            logger.debug(f"Catalog entry {url} has unsupported type {typ!r}")
+            return None
+        titles = self._catalog_localized_title(data)
+        if not titles:
+            logger.debug(f"Catalog entry {url} has no title")
+            return None
+        data = dict(data, localized_title=titles)
+        try:
+            # atomic: the Item is saved before it is validated, so a later
+            # raise would strand an item-less row, one more per reimport
+            with transaction.atomic():
+                site = FediverseInstance(url=url)
+                content = site.content_from_json(data, detect_redirection=False)
+                # going on would reach match_and_link_item, merging this into
+                # a shared item the uploader may not be allowed to edit
+                existing = self._existing_item_for_ids(content.lookup_ids)
+                if existing:
+                    logger.debug(f"Catalog entry {url} matches existing {existing}")
+                    return existing
+                # get_resource_ready links the item itself; asking again would
+                # re-run the match for nothing
+                resource = site.get_resource_ready(preloaded_content=content)
+                item = resource.item if resource else None
+        except Exception:
+            logger.exception(f"Error creating item from catalog data for {url}")
+            return None
+        if item:
+            logger.info(f"Created {item} from bundled catalog metadata")
+        else:
+            logger.error(f"Unable to create item from catalog data for {url}")
+        return item
+
     def parse_catalog(self, file_path: str) -> None:
         """Parse the catalog.ndjson file and build item lookup tables."""
         logger.debug(f"Parsing catalog file: {file_path}")
@@ -894,18 +996,25 @@ class NdjsonImporter(BaseImporter):
                         u = i.get("id")
                         if not u:
                             continue
-                        # TODO: the entry itself is not kept, so an item
-                        # that cannot be resolved (source server gone, no
-                        # external ids) fails every record referencing it
-                        # instead of being rebuilt from the bundled data.
-                        # self.catalog_items[u] = i
                         item_count += 1
                         links = [u] + [
                             r["url"]
                             for r in i.get("external_resources") or []
                             if isinstance(r, dict) and r.get("url")
                         ]
-                        self.items[u] = self.get_item_by_info_and_links("", "", links)
+                        # bundled ids, so an item already here is matched by
+                        # the ordinary lookup
+                        info = " ".join(
+                            f"{k}:{i[k]}"
+                            for k in ("isbn", "imdb")
+                            if isinstance(i.get(k), str) and i[k]
+                        )
+                        item = self.get_item_by_info_and_links("", info, links)
+                        if not item:
+                            # every link failed, so rebuild from the bundled
+                            # entry rather than failing every record for it
+                            item = self.create_item_from_catalog_data(i)
+                        self.items[u] = item
                     except Exception:
                         logger.exception("Error processing catalog item")
             logger.info(f"Loaded {item_count} items from catalog")
