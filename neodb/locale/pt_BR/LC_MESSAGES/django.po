@@ -6,9 +6,9 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"Report-Msgid-Bugs-To: \n"
+"Report-Msgid-Bugs-To: dev@neodb.social.NOSPAM\n"
 "POT-Creation-Date: 2026-08-23 15:40-0400\n"
-"PO-Revision-Date: 2026-08-14 19:05+0000\n"
+"PO-Revision-Date: 2026-09-02 01:51+0000\n"
 "Last-Translator: Havokdan <havokdan@yahoo.com.br>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/"
 "neodb/neodb/pt_BR/>\n"
@@ -4599,10 +4599,8 @@ msgstr ""
 "Um domínio por linha. Deixe em branco para permitir qualquer instância."
 
 #: common/views_manage.py:508
-#, fuzzy
-#| msgid "Registration failed"
 msgid "Registration Captcha Items"
-msgstr "Falha no cadastro"
+msgstr "Registro de itens de Captcha"
 
 #: common/views_manage.py:512
 msgid ""
@@ -4611,16 +4609,24 @@ msgid ""
 "carry no title text, so this cannot be solved with a screen reader: if you "
 "enable it, keep another way in, such as an invite link."
 msgstr ""
+"Número de capas de item que um novo usuário deve classificar em duas linhas "
+"de categoria antes de escolher um nome de usuário. 0 desativa o captcha; 5-6 "
+"é recomendado. As capas não possuem texto de título, então isso não pode ser "
+"resolvido com um leitor de tela: se você ativá-lo, mantenha outra maneira de "
+"acesso, como um link de convite."
 
 #: common/views_manage.py:520
 msgid "Registration Captcha Minimum Marks"
-msgstr ""
+msgstr "Mínimo de Marcas de Captcha de Registro"
 
 #: common/views_manage.py:523
 msgid ""
 "Marks an item needs before the captcha treats it as well known enough to be "
 "recognizable. Categories with too few such items fall back to any item."
 msgstr ""
+"Marca um item como necessário antes que o captcha o trate como "
+"suficientemente conhecido para ser reconhecível. Categorias com muito poucos "
+"desses itens recorrem a qualquer item."
 
 #: common/views_manage.py:529
 msgid "Enable Mastodon Login"
@@ -5971,16 +5977,12 @@ msgstr ""
 "aqui para exibir:"
 
 #: journal/templates/_sidebar_collection_filter.html:32
-#, fuzzy
-#| msgid "books dropped"
 msgid "dropped"
-msgstr "livros abadonados"
+msgstr "abadonados"
 
 #: journal/templates/_sidebar_collection_filter.html:33
-#, fuzzy
-#| msgid "No credits yet."
 msgid "not marked yet"
-msgstr "Ainda não há créditos."
+msgstr "ainda não marcado"
 
 #: journal/templates/_sidebar_search_journal.html:6
 msgid "filter by one of these statuses"
@@ -8056,61 +8058,60 @@ msgstr "Token"
 
 #: users/templates/users/captcha.html:4
 msgid "Sort every cover to continue."
-msgstr ""
+msgstr "Organize todas as capas para continuar."
 
 #: users/templates/users/captcha.html:5
 msgid "All sorted. Select Confirm."
-msgstr ""
+msgstr "Tudo organizado. Selecione Confirmar."
 
 #: users/templates/users/captcha.html:6
 msgid "Cover selected. Now choose a row."
-msgstr ""
+msgstr "Capa selecionada. Agora escolha uma linha."
 
 #: users/templates/users/captcha.html:7
 msgid "Time is up. Reload to try again."
-msgstr ""
+msgstr "O tempo acabou. Recarregue para tentar novamente."
 
 #: users/templates/users/captcha.html:26
 msgid "One quick check"
-msgstr ""
+msgstr "Uma verificação rápida"
 
 #: users/templates/users/captcha.html:28
 msgid ""
 "Put every cover into the row it belongs to. Drag it, or select a cover and "
 "then select a row."
 msgstr ""
+"Coloque cada capa na linha a que pertence. Arraste-a ou selecione uma capa e "
+"depois selecione uma linha."
 
 #: users/templates/users/captcha.html:41 users/templates/users/captcha.html:43
-#, fuzzy
-#| msgid "cover"
 msgid "Item cover"
-msgstr "capa"
+msgstr "Capa do item"
 
 #: users/templates/users/captcha.html:59
 #, python-format
 msgid "Move selected cover to %(label)s"
-msgstr ""
+msgstr "Mover a capa selecionada para %(label)s"
 
 #: users/templates/users/captcha.html:77
-#, fuzzy
-#| msgid "Confirm Import"
 msgid "Confirm"
-msgstr "Confirmar Importação"
+msgstr "Confirmar"
 
 #: users/templates/users/captcha.html:84
 #, python-format
 msgid "Show me another set (%(counter)s left)"
 msgid_plural "Show me another set (%(counter)s left)"
-msgstr[0] ""
-msgstr[1] ""
+msgstr[0] "Mostre-me outro conjunto (%(counter)s restantes)"
+msgstr[1] "Mostre-me outros conjuntos (%(counter)s restantes)"
 
 #: users/templates/users/captcha_solved.html:30
 msgid "Nicely sorted"
-msgstr ""
+msgstr "Bem organizado"
 
 #: users/templates/users/captcha_solved.html:31
 msgid "That is all we needed. Let's get you a username."
 msgstr ""
+"Isso é tudo o que precisávamos. Vamos arrumar um nome de usuário para você."
 
 #: users/templates/users/captcha_solved.html:34
 #: users/templates/users/login.html:63
@@ -8170,6 +8171,18 @@ msgid ""
 msgstr ""
 "Selecione o arquivo <code>.xlsx</code> exportado do <a href=\"https://"
 "doufen.org\" target=\"_blank\" rel=\"noopener\">Doufen</a>"
+
+#: users/templates/users/data.html:45
+msgid ""
+"A Douban archive exported by <a href=\"https://doubak.com\" "
+"target=\"_blank\" rel=\"noopener\">Doubak</a> is in NeoDB's own NDJSON "
+"format instead; upload it under <a href=\"#import-neodb-archive\">Import "
+"NeoDB Archive</a> below."
+msgstr ""
+"Um arquivo Douban exportado por <a href=\"https://doubak.com\" "
+"target=\"_blank\" rel=\"noopener\">Doubak</a> está no formato NDJSON do "
+"próprio NeoDB; carregue-o em <a href=\"#import-neodb-archive\">Importar "
+"arquivo NeoDB</a> abaixo."
 
 #: users/templates/users/data.html:34 users/templates/users/data.html:256
 msgid "Import Method"
@@ -8337,6 +8350,16 @@ msgstr ""
 "Envie um arquivo <code>.zip</code> contendo arquivos <code>.csv</code> ou "
 "<code>.ndjson</code> exportados do NeoDB."
 
+#: users/templates/users/data.html:330
+msgid ""
+"A Douban archive exported by <a href=\"https://doubak.com\" "
+"target=\"_blank\" rel=\"noopener\">Doubak</a> is in the same format and is "
+"imported here."
+msgstr ""
+"Um arquivo Douban exportado por <a href=\"https://doubak.com\" "
+"target=\"_blank\" rel=\"noopener\">Doubak</a> está no mesmo formato e é "
+"importado aqui."
+
 #: users/templates/users/data.html:314
 msgid "Existing data may be overwritten."
 msgstr "Os dados existentes podem ser substituídos."
@@ -8383,7 +8406,7 @@ msgstr "Download"
 
 #: users/templates/users/data.html:496
 msgid "Import and Export Articles (WordPress)"
-msgstr ""
+msgstr "Importar e Exportar Artigos (WordPress)"
 
 #: users/templates/users/data.html:499
 msgid ""
@@ -8391,30 +8414,37 @@ msgid ""
 "WordPress and most blogging tools can read and write. Marks, reviews and "
 "notes are not included: use the NeoDB archive above for those."
 msgstr ""
+"Seus artigos são trocados como posts do WordPress no formato WXR, que o "
+"WordPress e a maioria das ferramentas de blogs podem ler e escrever. Marcas, "
+"avaliações e notas não estão incluídas: use o arquivo NeoDB acima para esses."
 
 #: users/templates/users/data.html:502
 msgid ""
 "Article title, body, excerpt, tags, dates and featured image are exchanged. "
 "Comments and custom fields are ignored."
 msgstr ""
+"Título do artigo, corpo, trecho, etiquetas, datas e imagem em destaque são "
+"trocados. Comentários e campos personalizados são ignorados."
 
 #: users/templates/users/data.html:505
 msgid ""
 "The body is converted between Markdown and HTML, so formatting is kept but "
 "the text is not character-for-character identical."
 msgstr ""
+"O corpo é convertido entre Markdown e HTML, então a formatação é mantida, "
+"mas o texto não é idêntico caractere por caractere."
 
 #: users/templates/users/data.html:512
-#, fuzzy
-#| msgid "Export marks and reviews in XLSX (Doufen format)"
 msgid "Export articles in WordPress format"
-msgstr "Exportar marcações e análises em XLSX (formato Doufen)"
+msgstr "Exportar artigos no formato WordPress"
 
 #: users/templates/users/data.html:519
 msgid ""
 "In WordPress, go to <b>Tools</b> - <b>Export</b> - <b>Posts</b> to download "
 "an <code>.xml</code> file, then upload it below."
 msgstr ""
+"No WordPress, vá em <b>Ferramentas</b> - <b>Exportar</b> - <b>Publicações</"
+"b> para baixar um arquivo <code>.xml</code>, depois envie-o abaixo."
 
 #: users/templates/users/data.html:522
 msgid ""
@@ -8422,6 +8452,9 @@ msgid ""
 "password-protected posts are always imported as mentioned-only, so nothing "
 "unpublished becomes public."
 msgstr ""
+"Apenas publicações publicadas usam a visibilidade abaixo. Rascunhos, "
+"pendentes, privados e publicações protegidas por senha são sempre importados "
+"como somente mencionados, portanto nada não publicado se torna público."
 
 #: users/templates/users/data.html:560
 msgid "View Annual Summary"
@@ -9227,29 +9260,25 @@ msgid "Registration is for invitation only"
 msgstr "O cadastro é apenas por convite"
 
 #: users/views/account.py:266 users/views/account.py:338
-#, fuzzy
-#| msgid "Timestamp"
 msgid "Time is up"
-msgstr "Marcação de tempo"
+msgstr "O tempo acabou"
 
 #: users/views/account.py:267 users/views/account.py:310
 #: users/views/account.py:339
 msgid "Please log in again to continue registration."
-msgstr ""
+msgstr "Por favor, faça login novamente para continuar o registro."
 
 #: users/views/account.py:313
 msgid "That is not quite right. Here is a new set."
-msgstr ""
+msgstr "Isso não está exatamente certo. Aqui está um novo conjunto."
 
 #: users/views/account.py:325
 msgid "Too many attempts"
-msgstr ""
+msgstr "Muitas tentativas"
 
 #: users/views/account.py:326
-#, fuzzy
-#| msgid "Too many attempts, please try again later."
 msgid "Please try again later."
-msgstr "Muitas tentativas, tente novamente mais tarde."
+msgstr "Por favor, tente novamente mais tarde."
 
 #: users/views/account.py:415
 msgid "Username already taken. Please try again."

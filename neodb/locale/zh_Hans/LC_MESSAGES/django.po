@@ -5,11 +5,11 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"Report-Msgid-Bugs-To: \n"
+"Report-Msgid-Bugs-To: dev@neodb.social.NOSPAM\n"
 "POT-Creation-Date: 2026-08-23 15:40-0400\n"
-"PO-Revision-Date: 2026-08-08 21:19+0000\n"
-"Last-Translator: reducedradius "
-"<137701630+flytothehighest@users.noreply.github.com>\n"
+"PO-Revision-Date: 2026-09-02 01:51+0000\n"
+"Last-Translator: Hosted Weblate user 54392 "
+"<hamburger2048@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Chinese (Simplified Han script) <https://hosted.weblate.org/"
 "projects/neodb/neodb/zh_Hans/>\n"
 "Language: zh_Hans\n"
@@ -7181,7 +7181,7 @@ msgstr "投票"
 
 #: takahe/models.py:453
 msgid "Display Name"
-msgstr ""
+msgstr "显示名称"
 
 #: takahe/models.py:455
 msgid "Bio"
@@ -7189,11 +7189,11 @@ msgstr "简介"
 
 #: takahe/models.py:457
 msgid "Manually approve new followers"
-msgstr ""
+msgstr "手动批准新关注者"
 
 #: takahe/models.py:461
 msgid "Include profile, marks and posts in discovery"
-msgstr ""
+msgstr "在发现中包含个人资料、标记和帖子"
 
 #: takahe/models.py:464
 msgid "Include posts in search results"
@@ -7201,11 +7201,11 @@ msgstr "在搜索结果中包含帖文"
 
 #: takahe/models.py:482
 msgid "Profile picture"
-msgstr ""
+msgstr "个人资料图片"
 
 #: takahe/models.py:489
 msgid "Header picture"
-msgstr ""
+msgstr "背景图片"
 
 #: users/models/task.py:22
 msgid "Started"
@@ -7983,8 +7983,8 @@ msgstr ""
 msgid ""
 "A Douban archive exported by <a href=\"https://doubak.com\" "
 "target=\"_blank\" rel=\"noopener\">Doubak</a> is in NeoDB's own NDJSON "
-"format instead; upload it under <a "
-"href=\"#import-neodb-archive\">Import NeoDB Archive</a> below."
+"format instead; upload it under <a href=\"#import-neodb-archive\">Import "
+"NeoDB Archive</a> below."
 msgstr ""
 "由 <a href=\"https://doubak.com\" target=\"_blank\" rel=\"noopener\">豆备 "
 "Doubak</a> 导出的豆瓣档案是 NeoDB 自己的 NDJSON 格式，请用下方的<a "
@@ -8151,8 +8151,8 @@ msgstr ""
 #: users/templates/users/data.html:330
 msgid ""
 "A Douban archive exported by <a href=\"https://doubak.com\" "
-"target=\"_blank\" rel=\"noopener\">Doubak</a> is in the same format and "
-"is imported here."
+"target=\"_blank\" rel=\"noopener\">Doubak</a> is in the same format and is "
+"imported here."
 msgstr ""
 "由 <a href=\"https://doubak.com\" target=\"_blank\" rel=\"noopener\">豆备 "
 "Doubak</a> 导出的豆瓣档案是同一种格式，也在这里导入。"
@@ -8717,7 +8717,7 @@ msgstr "关闭"
 
 #: users/templates/users/register.html:112
 msgid "Cut the sh*t and get me in!"
-msgstr "完全了解并同意站规和协议，现在开始使用。"
+msgstr "别废话，赶紧让我用!"
 
 #: users/templates/users/relationship_list.html:17
 msgid "export"
