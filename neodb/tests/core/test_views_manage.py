@@ -1,3 +1,6 @@
+import inspect
+import re
+from pathlib import Path
 from typing import Any
 
 import pydantic
@@ -9,10 +12,12 @@ from django.utils import translation
 from django.utils.translation import trans_real
 
 from boofilsic import settings as boofilsic_settings
-from common.config import resolve_email_settings
+from common.config import hide_secret, resolve_email_settings
 from common.models import SiteConfig
 from users.middlewares import activate_language_for_user
+from users.models import User
 from common.views_manage import (
+    ENV_VARS_WITH_SITE_SETTING,
     AccessSettings,
     AdvancedSettings,
     APIKeysSettings,
@@ -20,6 +25,7 @@ from common.views_manage import (
     CatalogSettings,
     DiscoverSettings,
     DownloaderSettings,
+    EnvironmentSettings,
     FederationSettings,
     RecommendationSettings,
 )
@@ -253,7 +259,7 @@ class TestEmailSettingsApply:
             assert settings.EMAIL_BACKEND == expected_backend
             assert settings.DEFAULT_FROM_EMAIL == "NeoDB Test <test@example.org>"
             assert settings.ENABLE_LOGIN_EMAIL is enabled
-            assert settings.SITE_INFO["enable_login_email"] is enabled
+            assert settings.ENABLE_LOGIN_EMAIL is enabled
         finally:
             SiteConfig.objects.filter(pk=1).delete()
             if old_system is not None:
@@ -328,21 +334,30 @@ class TestConvertValueSimple:
 
 @pytest.mark.django_db(databases="__all__")
 class TestMastodonTimeoutApply:
-    """DB-stored mastodon_timeout must reach django settings on reload."""
+    """The Mastodon client sends the DB-stored mastodon_timeout after a reload."""
 
-    def test_db_value_applies_to_settings(self):
-        old_mastodon = settings.MASTODON_TIMEOUT
-        old_takahe = settings.TAKAHE_REMOTE_TIMEOUT
+    def test_db_value_is_used_by_requests(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from mastodon.models import mastodon as mastodon_module
+
+        seen: dict[str, Any] = {}
+
+        def fake_request(method: str, url: str, **kwargs: Any) -> None:
+            seen.update(kwargs)
+
+        monkeypatch.setattr(mastodon_module.requests, "request", fake_request)
         old_system = getattr(SiteConfig, "system", None)
         try:
             SiteConfig.set_system(mastodon_timeout=17)
             SiteConfig.reload()
+
+            mastodon_module.get("https://mastodon.example/api/v1/instance")
+
             assert SiteConfig.system.mastodon_timeout == 17
-            assert settings.MASTODON_TIMEOUT == 17
-            assert settings.TAKAHE_REMOTE_TIMEOUT == 17
+            assert seen["timeout"] == 17
         finally:
-            settings.MASTODON_TIMEOUT = old_mastodon
-            settings.TAKAHE_REMOTE_TIMEOUT = old_takahe
+            SiteConfig.objects.filter(pk=1).delete()
             if old_system is not None:
                 SiteConfig.system = old_system
 
@@ -462,3 +477,253 @@ class TestLanguageCodeApply:
         finally:
             translation.deactivate()
             trans_real._default = None  # ty: ignore[unresolved-attribute]
+
+
+@pytest.mark.django_db(databases="__all__")
+class TestEnvDefaultsIsolation:
+    """Env fallbacks must not follow the DB values applied to django settings.
+
+    set_system() drops any value equal to its env fallback. If the fallbacks
+    tracked the effective values instead, re-saving a settings page would
+    delete the stored overrides, which then vanish on the next restart (#1828).
+    """
+
+    @staticmethod
+    def _changed_options() -> SiteConfig.SystemOptions:
+        """Every field set to a value that differs from the current config."""
+        current = SiteConfig.load_system()
+        values: dict[str, Any] = {}
+        for field in SiteConfig.SystemOptions.model_fields:
+            value = getattr(current, field)
+            if field == "email_url":
+                values[field] = "smtp://user:pw@mail.example.org:587"
+            elif field == "language_code":
+                values[field] = next(
+                    code for code in settings.SUPPORTED_UI_LANGUAGES if code != value
+                )
+            elif field == "preferred_languages":
+                values[field] = [
+                    *value,
+                    next(c for c in ("fr", "de", "ja", "ko") if c not in value),
+                ]
+            elif isinstance(value, bool):
+                values[field] = not value
+            elif isinstance(value, int | float):
+                values[field] = value + 1
+            elif isinstance(value, str):
+                values[field] = f"{value}-changed"
+            elif isinstance(value, list):
+                values[field] = [*value, "changed"]
+            elif isinstance(value, dict):
+                values[field] = {**value, "changed": "changed"}
+            else:
+                raise AssertionError(f"unhandled type for {field}: {type(value)}")
+        # validators would reject some perturbed values and are irrelevant here
+        return SiteConfig.SystemOptions.model_construct(**values)
+
+    def test_apply_to_settings_does_not_change_env_defaults(self) -> None:
+        # Exhaustive on purpose: a new `settings.X = opts.x` line in
+        # _apply_to_settings for an attribute _env_defaults reads would bring
+        # the bug back for that field, so every field is perturbed.
+        old_system = getattr(SiteConfig, "system", None)
+        before = SiteConfig._env_defaults()
+        try:
+            SiteConfig._apply_to_settings(self._changed_options())
+
+            assert SiteConfig._env_defaults() == before
+        finally:
+            if old_system is not None:
+                SiteConfig.system = old_system
+                SiteConfig._apply_to_settings(old_system)
+            else:
+                SiteConfig.reload()
+
+    def test_resaving_branding_keeps_stored_values(self) -> None:
+        old_system = getattr(SiteConfig, "system", None)
+        try:
+            SiteConfig.set_system(site_name="Changed Name", mastodon_timeout=99)
+            SiteConfig.reload()
+            # The form posts every field of the page, unchanged ones included.
+            SiteConfig.set_system(
+                site_name="Changed Name", site_color="red", mastodon_timeout=99
+            )
+
+            data = SiteConfig.objects.get(pk=1).data
+            assert data["site_name"] == "Changed Name"
+            assert data["site_color"] == "red"
+            assert data["mastodon_timeout"] == 99
+        finally:
+            SiteConfig.objects.filter(pk=1).delete()
+            if old_system is not None:
+                SiteConfig.system = old_system
+                SiteConfig._apply_to_settings(old_system)
+            else:
+                SiteConfig.reload()
+
+
+class TestSiteConfigReaders:
+    """Application code reads SiteConfig fields through SiteConfig.system.
+
+    A Django setting that only seeds a SiteConfig field holds the .env value,
+    so reading it directly ignores the value set in the UI. Settings that
+    _apply_to_settings() keeps in sync (Django consumes those) are exempt.
+    """
+
+    # (path relative to the neodb package, setting): documented exceptions
+    ALLOWED = {
+        # initial value of a module-level list that _apply_to_settings rewrites
+        ("common/models/lang.py", "PREFERRED_LANGUAGES"),
+    }
+    SKIP_PATHS = ("tests/", "boofilsic/settings.py", "common/models/site_config.py")
+
+    def test_no_direct_reads_of_seed_settings(self) -> None:
+        seeds = inspect.getsource(SiteConfig._env_defaults)
+        synced = set(
+            re.findall(
+                r"settings\.(\w+)\s*=", inspect.getsource(SiteConfig._apply_to_settings)
+            )
+        )
+        patterns = {
+            name: rf"\bsettings\.{name}\b"
+            for name in set(re.findall(r'getattr\(\s*settings,\s*"(\w+)"', seeds))
+            - synced
+        }
+        patterns |= {
+            f"SITE_INFO[{key}]": rf'settings\.SITE_INFO(\["{key}"\]|\.get\(\s*"{key}")'
+            for key in re.findall(r'site_info\.get\(\s*"(\w+)"', seeds)
+        }
+
+        root = Path(boofilsic_settings.__file__).resolve().parent.parent
+        offenders = []
+        for path in sorted(root.rglob("*.py")):
+            rel = path.relative_to(root).as_posix()
+            if rel.startswith(self.SKIP_PATHS) or "/migrations/" in rel:
+                continue
+            text = path.read_text()
+            for name, pattern in patterns.items():
+                if (rel, name) not in self.ALLOWED and re.search(pattern, text):
+                    offenders.append(f"{rel}: settings.{name}")
+
+        assert not offenders, (
+            "Read these through SiteConfig.system instead, or add them to"
+            f" TestSiteConfigReaders.ALLOWED with a reason: {offenders}"
+        )
+
+
+class TestEnvironmentCoverage:
+    """Every env var read by boofilsic.settings is visible on some manage page."""
+
+    @staticmethod
+    def _env_vars_read_by_settings() -> set[str]:
+        source = Path(boofilsic_settings.__file__).read_text()
+        names = set(re.findall(r'\benv(?:\.\w+)?\(\s*"([A-Z0-9_]+)"', source))
+        return names | set(boofilsic_settings.env.scheme)
+
+    def test_every_env_var_is_covered(self) -> None:
+        env_vars = self._env_vars_read_by_settings()
+        shown = EnvironmentSettings.env_var_names()
+        seeded = set(ENV_VARS_WITH_SITE_SETTING)
+
+        assert not shown & seeded, f"Env vars listed twice: {shown & seeded}"
+        missing = env_vars - shown - seeded
+        assert not missing, (
+            f"Env vars read by settings but not visible in the manage UI: {missing}."
+            " Add them to EnvironmentSettings.groups, or to"
+            " ENV_VARS_WITH_SITE_SETTING if a SiteConfig field shows them."
+        )
+        stale = (shown | seeded) - env_vars
+        assert not stale, f"Manage UI lists env vars that settings never reads: {stale}"
+
+    def test_seeded_fields_exist(self) -> None:
+        fields = set(SiteConfig.SystemOptions.model_fields)
+        stale = {k: v for k, v in ENV_VARS_WITH_SITE_SETTING.items() if v not in fields}
+        assert not stale, (
+            f"ENV_VARS_WITH_SITE_SETTING points at unknown fields: {stale}"
+        )
+
+
+class TestHideSecret:
+    @pytest.mark.parametrize(
+        ("name", "value", "expected"),
+        [
+            ("NEODB_SECRET_KEY", "abc", "********"),
+            ("TAKAHE_STATOR_TOKEN", "abc", "********"),
+            ("NEODB_SECRET_KEY", "", ""),
+            (
+                "NEODB_DB_URL",
+                "postgres://neodb:pw@db:5432/neodb",
+                "postgres://neodb:********@db:5432/neodb",
+            ),
+            ("NEODB_REDIS_URL", "redis://redis:6379/0", "redis://redis:6379/0"),
+            (
+                "NEODB_SENTRY_DSN",
+                "https://k3y@o1.ingest.sentry.io/2",
+                "https://********@o1.ingest.sentry.io/2",
+            ),
+            ("NEODB_SITE_DOMAIN", "example.org", "example.org"),
+            ("NEODB_DEBUG", True, "True"),
+            ("NEODB_ADMIN_HANDLES", ["a", "b"], "a, b"),
+            ("NEODB_EXTRA_APPS", None, ""),
+        ],
+    )
+    def test_hide(self, name: str, value: object, expected: str) -> None:
+        assert hide_secret(name, value) == expected
+
+
+@pytest.mark.django_db(databases="__all__")
+class TestEnvironmentPage:
+    @staticmethod
+    def _login(client: Any, superuser: bool) -> None:
+        user = User.register(username="admin" if superuser else "bob")
+        if superuser:
+            user.is_superuser = True
+            user.save(update_fields=["is_superuser"])
+        client.force_login(user, backend="mastodon.auth.OAuth2Backend")
+
+    def test_shows_settings_with_secrets_masked(
+        self, client: Any, monkeypatch: pytest.MonkeyPatch, settings: Any
+    ) -> None:
+        settings.SECRET_KEY = "top-secret-key-value"
+        monkeypatch.setenv("TAKAHE_STATOR_TOKEN", "stator-secret-token")
+        monkeypatch.setenv("TAKAHE_MAIN_DOMAIN", "fedi.example.org")
+        self._login(client, superuser=True)
+
+        response = client.get("/manage/environment/")
+
+        assert response.status_code == 200
+        html = response.content.decode()
+        assert "NEODB_SITE_DOMAIN" in html
+        assert settings.SITE_DOMAIN in html
+        assert "NEODB_SECRET_KEY" in html
+        assert "top-secret-key-value" not in html
+        # variables this process has that settings does not read are listed raw
+        assert "TAKAHE_MAIN_DOMAIN" in html
+        assert "fedi.example.org" in html
+        assert "TAKAHE_STATOR_TOKEN" in html
+        assert "stator-secret-token" not in html
+        # the raw connection strings are shown, with the password masked
+        assert hide_secret("NEODB_DB_URL", settings.DB_URL) in html
+        assert hide_secret("TAKAHE_DB_URL", settings.TAKAHE_DB_URL) in html
+        for alias in ("default", "takahe"):
+            password = settings.DATABASES[alias].get("PASSWORD")
+            if password:
+                assert password not in html
+
+    def test_requires_superuser(self, client: Any) -> None:
+        self._login(client, superuser=False)
+
+        response = client.get("/manage/environment/")
+
+        assert response.status_code == 302
+
+    def test_form_pages_render_through_shared_base(self, client: Any) -> None:
+        # Branding has a JSONFormField, so this also covers form.media in base
+        self._login(client, superuser=True)
+
+        response = client.get("/manage/branding/")
+
+        assert response.status_code == 200
+        html = response.content.decode()
+        assert 'class="manage-form"' in html
+        assert 'type="submit"' in html
+        assert "/manage/environment/" in html

@@ -3,6 +3,25 @@ from urllib import parse
 import environ
 from django.core.exceptions import ImproperlyConfigured
 
+_SECRET_WORDS = ("SECRET", "TOKEN", "PASSWORD", "KEY")
+
+
+def hide_secret(name: str, value: object) -> str:
+    """Render a setting for display with its credential removed."""
+    if value is None:
+        return ""
+    text = ", ".join(map(str, value)) if isinstance(value, list | tuple) else str(value)
+    if any(word in name.upper() for word in _SECRET_WORDS):
+        return "********" if text else ""
+    if "://" not in text or "@" not in text:
+        return text
+    # scheme://user:password@host keeps the user; a DSN has only the key before
+    # the @, so that is hidden entirely
+    scheme, _, rest = text.partition("://")
+    userinfo, _, host = rest.rpartition("@")
+    user, sep, _password = userinfo.partition(":")
+    return f"{scheme}://{user + ':' if sep else ''}********@{host}"
+
 
 def resolve_email_settings(email_url: object, debug: bool) -> dict[str, object]:
     """Resolve an email URL into settings that can be applied at runtime."""

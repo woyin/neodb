@@ -204,23 +204,29 @@ class SiteConfig(models.Model):
 
     @classmethod
     def _env_defaults(cls) -> dict:
-        """Read current env-var-derived values from django settings as fallbacks."""
+        """Read env-var-derived values from django settings as fallbacks.
+
+        set_system() drops values equal to these, so every setting read here
+        must stay the untouched env value: _apply_to_settings() must not write
+        to it. The settings Django itself consumes (EMAIL_URL, LANGUAGE_CODE)
+        keep a separate *_ENV copy for that reason.
+        """
+        site_info = settings.SITE_INFO
         return {
             # Branding
-            "site_name": settings.SITE_INFO.get("site_name", ""),
-            "site_logo": settings.SITE_INFO.get("site_logo", "/s/img/logo.svg"),
-            "site_icon": settings.SITE_INFO.get("site_icon", "/s/img/icon.png"),
-            "user_icon": settings.SITE_INFO.get("user_icon", "/s/img/avatar.png"),
-            "site_color": settings.SITE_INFO.get("site_color", "azure"),
-            "site_intro": settings.SITE_INFO.get("site_intro", ""),
-            "site_head": settings.SITE_INFO.get("site_head", ""),
-            "site_description": settings.SITE_INFO.get(
+            "site_name": site_info.get("site_name", ""),
+            "site_logo": site_info.get("site_logo", "/s/img/logo.svg"),
+            "site_icon": site_info.get("site_icon", "/s/img/icon.png"),
+            "user_icon": site_info.get("user_icon", "/s/img/avatar.png"),
+            "site_color": site_info.get("site_color", "azure"),
+            "site_intro": site_info.get("site_intro", ""),
+            "site_head": site_info.get("site_head", ""),
+            "site_description": site_info.get(
                 "site_description",
                 "reviews about book, film, music, podcast and game.",
             ),
             "site_links": {
-                item["title"]: item["url"]
-                for item in settings.SITE_INFO.get("site_links", [])
+                item["title"]: item["url"] for item in site_info.get("site_links", [])
             },
             # Access Control
             "invite_only": getattr(settings, "INVITE_ONLY", False),
@@ -396,21 +402,12 @@ class SiteConfig(models.Model):
 
     @classmethod
     def _apply_to_settings(cls, opts: "SiteConfig.SystemOptions") -> None:
-        """Write config values back to django.conf.settings for backward compat."""
-        # Branding -> SITE_INFO
-        si = settings.SITE_INFO
-        si["site_name"] = opts.site_name
-        si["site_logo"] = opts.site_logo
-        si["site_icon"] = opts.site_icon
-        si["user_icon"] = opts.user_icon
-        si["site_color"] = opts.site_color
-        si["site_intro"] = opts.site_intro
-        si["site_head"] = opts.site_head
-        si["site_description"] = opts.site_description
-        si["site_links"] = [{"title": k, "url": v} for k, v in opts.site_links.items()]
-        si["enable_login_atproto"] = opts.enable_login_bluesky
-        si["translate_enabled"] = bool(opts.deepl_api_key) or bool(opts.lt_api_url)
+        """Push the config values that Django itself consumes into settings.
 
+        Everything else (branding, timeouts, ...) is read from SiteConfig.system
+        at the point of use. Only settings with a separate *_ENV copy may be
+        written here, or _env_defaults() would compare against the DB value.
+        """
         # Email delivery and login availability
         settings.EMAIL_URL = opts.email_url
         settings.DEFAULT_FROM_EMAIL = opts.email_from
@@ -418,7 +415,6 @@ class SiteConfig(models.Model):
             opts.email_url, settings.DEBUG
         ).items():
             setattr(settings, key, value)
-        si["enable_login_email"] = settings.ENABLE_LOGIN_EMAIL
 
         # Refresh module-level language caches
         import common.models.lang as lang_module
@@ -448,10 +444,6 @@ class SiteConfig(models.Model):
             # notifies everything derived from either setting. Not free, and it
             # mutates shared objects in place, so only run it on a real change.
             lang_module.refresh_language_caches()
-
-        # Timeouts read from settings at call time in mastodon/takahe clients
-        settings.MASTODON_TIMEOUT = opts.mastodon_timeout
-        settings.TAKAHE_REMOTE_TIMEOUT = opts.mastodon_timeout
 
         # Derived values used in many places via settings.SITE_DOMAINS
         settings.SITE_DOMAINS = [settings.SITE_DOMAIN] + opts.alternative_domains
