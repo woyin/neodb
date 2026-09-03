@@ -246,7 +246,7 @@ def render_list(
             rating_grade=Subquery(rating.values("grade"))
         ).order_by(F("rating_grade").desc(nulls_last=True), "id")
     else:
-        queryset = queryset.order_by("-created_time")
+        queryset = queryset.order_by("-created_time", "-id")
     if year:
         year = int(year)
         queryset = queryset.filter(created_time__year=year)
