@@ -11,15 +11,25 @@
       </li>
     </ul>
     <ul class="nav-search {% if request.GET.q %}unhide{% endif %}">
-      <li>
+      <li _="on focusout if not me.contains(event.relatedTarget) set #q's @data-dismissed to 'true' then send htmx:abort to #q then set #search-suggest's innerHTML to '' end">
         <form role="search" method="get" action="{% url 'common:search' %}">
           <input type="search"
                  name="q"
                  id="q"
                  placeholder="{% trans 'title, creator, ISBN, item url, @user, @user@instance' %}"
                  class="search"
+                 autocomplete="off"
+                 aria-controls="search-suggest"
+                 hx-get="{% url 'common:search_suggest' %}"
+                 hx-trigger="input changed delay:200ms"
+                 hx-include="[name='c']"
+                 hx-sync="this:replace"
+                 hx-target="#search-suggest"
+                 hx-swap="innerHTML"
+                 _="on input remove @data-dismissed from me end on htmx:beforeRequest if @data-dismissed then halt the event's default end on keydown[key is 'Escape'] set @data-dismissed to 'true' then send htmx:abort to me then set #search-suggest's innerHTML to '' end on keydown[key is 'ArrowDown'] set a to #search-suggest.querySelector('a') then if a then halt the event's default then call a.focus() end end"
                  value="{{ request.GET.q|default:'' }}" />
-          <select name="c">
+          <select name="c"
+                  _="on change set #q's @data-dismissed to 'true' then send htmx:abort to #q then set #search-suggest's innerHTML to ''">
             {% visible_categories as cats %}
             <option value="all">{% trans 'All Items' %}</option>
             {% if 'book' in cats %}
@@ -55,6 +65,9 @@
           </select>
           <input type="submit" value="&#xf002;" class="fa-solid" />
         </form>
+        <div id="search-suggest"
+             _="on mousedown halt the event's default end on keydown[key is 'Escape'] set #q's @data-dismissed to 'true' then call #q.focus() then send htmx:abort to #q then set my innerHTML to '' end on keydown[key is 'ArrowDown'] halt the event's default then set row to target.parentElement.nextElementSibling then if row then call row.querySelector('a').focus() end end on keydown[key is 'ArrowUp'] halt the event's default then set row to target.parentElement.previousElementSibling then if row then call row.querySelector('a').focus() else call #q.focus() end end">
+        </div>
       </li>
     </ul>
     <ul class="nav-links">
