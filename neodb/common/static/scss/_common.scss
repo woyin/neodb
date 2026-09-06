@@ -20,10 +20,9 @@
   margin-bottom: var(--pico-typography-spacing-vertical);
 }
 
-// Compact timeline-teaser layout shared by review / article / post-only
-// article cards. Replaces inline ``style="margin-bottom:0.2em"`` /
-// ``style="margin:0 0 0.4em 0"`` that used to live on each template.
-.review-teaser,
+// Compact timeline-teaser layout for article cards. Replaces inline
+// ``style="margin-bottom:0.2em"`` / ``style="margin:0 0 0.4em 0"`` that used
+// to live on each template.
 .article-teaser {
   h4 {
     margin-bottom: 0.2em;
@@ -112,11 +111,6 @@
   }
 }
 
-
-.longlist {
-  max-height: 60vh;
-  overflow-y: scroll;
-}
 
 .hidden {
   display: none;
@@ -215,12 +209,6 @@ span.invisible {
 .hint {
   color: var(--pico-muted-color);
   opacity: 0.5;
-}
-
-.oneline {
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
 }
 
 .handler {
@@ -322,7 +310,6 @@ form img {
 
   img {
     max-width: unset;
-    border-radius: 50%;
     height: calc(1rem * var(--pico-line-height) + var(--pico-nav-link-spacing-vertical) * 2 - var(--pico-border-width) * 2);
     width: calc(1rem * var(--pico-line-height) + var(--pico-nav-link-spacing-vertical) * 2 - var(--pico-border-width) * 2);
     border: 2px solid var(--pico-form-element-background-color);
@@ -334,7 +321,6 @@ form img {
 .avatar a img:hover {
   transition: ease-out 0.2s;
   border: 2px solid var(--pico-primary);
-  -webkit-transition: ease-out 0.2s;
 }
 
 .multi-fields {
@@ -372,4 +358,72 @@ form img {
     font-size: 1.1em;
     color: var(--pico-secondary);
   }
+}
+
+// Colours for the profile sort UI below, which predates the Pico variables
+// used elsewhere in this file.
+$color-primary: #00a1cc !default;
+$color-tertiary: #bbb !default;
+
+// Profile page sections, reordered by drag and drop in sort_layout.js.
+.entity-sort {
+  position: relative;
+  margin-bottom: 30px;
+
+  &--placeholder {
+    border: dashed $color-tertiary 4px;
+  }
+
+  &--hover {
+    padding: 10px;
+    border: dashed $color-primary 2px !important;
+    border-radius: 3px;
+  }
+
+  &--sortable {
+    padding: 10px;
+    margin: 10px 0;
+    border: dashed $color-tertiary 2px;
+    cursor: all-scroll;
+  }
+
+  &--hidden {
+    opacity: 0.4;
+  }
+}
+
+.entity-sort-control {
+  display: flex;
+  justify-content: flex-end;
+
+  &__button {
+    margin-top: 5px;
+    margin-left: 12px;
+    padding: 0 2px;
+    cursor: pointer;
+    color: $color-tertiary;
+
+    &:hover {
+      color: $color-primary;
+
+      &>.icon-save svg,
+      &>.icon-edit svg {
+        fill: $color-primary;
+      }
+    }
+
+    &--float-right {
+      position: absolute;
+      top: 4px;
+      right: 10px;
+    }
+  }
+}
+
+img.emoji {
+  height: 14px;
+  box-sizing: border-box;
+  object-fit: contain;
+  position: relative;
+  top: 3px;
 }
