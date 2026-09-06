@@ -15,6 +15,7 @@ from catalog.common import ProxiedImageDownloader
 from common.utils import GenerateDateUUIDMediaFilePath
 from journal.models import (
     Article,
+    Attachment,
     Collection,
     Comment,
     Note,
@@ -189,7 +190,9 @@ class NdjsonExporter(Task):
             attachments.append({"file": path, "mimetype": a.mimetype})
         return attachments
 
-    def _bundle_registered_attachments(self, note: Note) -> list[dict[str, str]]:
+    def _bundle_registered_attachments(
+        self, rows: list[Attachment]
+    ) -> list[dict[str, str]]:
         """Bundle a Note's registered uploads (``journal.Attachment`` rows).
 
         Rows are the only source that survives takahe pruning the post: the
@@ -199,7 +202,7 @@ class NdjsonExporter(Task):
         only, so they export like the legacy entries did.
         """
         attachments = []
-        for a in note.attachment_records.all():
+        for a in rows:
             url = a.url
             if not url:
                 continue
@@ -211,35 +214,13 @@ class NdjsonExporter(Task):
         return attachments
 
     def _bundle_note_attachments(self, note: Note) -> list[dict[str, str]]:
-        """Attachment records for a Note, in descending order of fidelity.
+        """Attachment records for a Note, from the upload registry.
 
-        1. the linked post, which holds the original files;
-        2. the upload registry, which holds our own copy of them -- the only
-           source left once takahe has pruned the post;
-        3. the legacy ``attachments`` JSON, for notes the async backfill has
-           not reached yet.
-
-        Trying the registry before the JSON matters: a pruned post leaves the
-        JSON pointing at takahe media that no longer exists, which would
-        export as a URL with no file and restore as a dead link.
+        The registry is the one source for note media: it holds our own copy
+        of what was posted (the only thing left once takahe has pruned the
+        post) and a pointer row for remote media that was never downloaded.
         """
-        if note.latest_post:
-            attachments = self._bundle_post_attachments(note.latest_post)
-            if attachments:
-                return attachments
-        attachments = self._bundle_registered_attachments(note)
-        if attachments:
-            return attachments
-        for a in note.attachments or []:
-            url = a.get("url")
-            if not url:
-                continue
-            entry = {"mimetype": a.get("mimetype", ""), "url": url}
-            path = self._save_image(url)
-            if path:
-                entry["file"] = path
-            attachments.append(entry)
-        return attachments
+        return self._bundle_registered_attachments(list(note.attachment_records.all()))
 
     def run(self):
         self.ref_items = []
