@@ -8590,6 +8590,14 @@ msgstr ""
 "墳)</a>導出時勾選<mark>書影音遊劇</mark>和<mark>評論</mark>。<br>選擇從豆伴"
 "(豆墳)導出的<code>.xlsx</code>文件"
 
+#: users/templates/users/data.html:45
+msgid ""
+"A Douban archive exported by <a href=\"https://doubak.com\" "
+"target=\"_blank\" rel=\"noopener\">Doubak</a> is in NeoDB's own NDJSON "
+"format instead; upload it under <a href=\"#import-neodb-archive\">Import "
+"NeoDB Archive</a> below."
+msgstr ""
+
 #: users/templates/users/data.html:34 users/templates/users/data.html:256
 msgid "Import Method"
 msgstr "匯入方式"
@@ -8739,6 +8747,20 @@ msgid ""
 "Upload a <code>.zip</code> file containing <code>.csv</code> or "
 "<code>.ndjson</code> files exported from NeoDB."
 msgstr ""
+
+#: users/templates/users/data.html:330
+#, fuzzy
+#| msgid ""
+#| "Select <code>.xlsx</code> exported from <a href=\"https://doufen.org\" "
+#| "target=\"_blank\" rel=\"noopener\">Doufen</a>"
+msgid ""
+"A Douban archive exported by <a href=\"https://doubak.com\" "
+"target=\"_blank\" rel=\"noopener\">Doubak</a> is in the same format and is "
+"imported here."
+msgstr ""
+"在<a href=\"https://doufen.org\" target=\"_blank\" rel=\"noopener\">豆伴(豆"
+"墳)</a>導出時勾選<mark>書影音遊劇</mark>和<mark>評論</mark>。<br>選擇從豆伴"
+"(豆墳)導出的<code>.xlsx</code>文件"
 
 #: users/templates/users/data.html:314
 #, fuzzy

@@ -7128,7 +7128,7 @@ msgstr "全网动态"
 
 #: takahe/models.py:445
 msgid "Display Name"
-msgstr ""
+msgstr "显示名称"
 
 #: takahe/models.py:447
 msgid "Bio"
@@ -7136,11 +7136,11 @@ msgstr "简介"
 
 #: takahe/models.py:449
 msgid "Manually approve new followers"
-msgstr ""
+msgstr "手动批准新关注者"
 
 #: takahe/models.py:453
 msgid "Include profile, marks and posts in discovery"
-msgstr ""
+msgstr "在发现中包含个人资料、标记和帖子"
 
 #: takahe/models.py:456
 msgid "Include posts in search results"
@@ -7148,11 +7148,11 @@ msgstr "在搜索结果中包含帖文"
 
 #: takahe/models.py:474
 msgid "Profile picture"
-msgstr ""
+msgstr "个人资料图片"
 
 #: takahe/models.py:481
 msgid "Header picture"
-msgstr ""
+msgstr "背景图片"
 
 #: users/models/task.py:24
 msgid "Started"
