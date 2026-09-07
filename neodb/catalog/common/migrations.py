@@ -10,6 +10,7 @@ from time import sleep
 import django_rq
 from discord import Object, SyncWebhook
 from django.db import connection, models
+from django.db.models.functions import Trim
 from django.utils import timezone
 from rq.job import Job
 from tqdm import tqdm
@@ -1046,3 +1047,157 @@ def unify_metadata_20260715(
             f"unify_metadata complete: {updated} of {total} items updated, "
             f"{reindexed} docs reindexed, last pk {last_pk}."
         )
+
+
+def dedupe_credits_20260907(batch_size: int = 500, dry_run: bool = False) -> None:
+    """Delete duplicate ItemCredit rows.
+
+    For one item and role, duplicates are: a People linked twice (credited
+    under two localized names, or a stored stripped name merged with a
+    refetched unstripped copy), one plain name twice up to whitespace, or an
+    unlinked copy of a linked credit. Rows differing in character are
+    distinct. The first row by order is kept.
+
+    Metadata entries naming a deleted linked row are rewritten to the person
+    URL, so the link survives the deletion of the row that carried that name;
+    a name shared by two people in one role is left alone. Nothing else in
+    metadata changes, and the next sync (edit save, refetch or merge)
+    collapses the entries and reuses the surviving row. Running the sync
+    here would repurpose or prune rows that have no metadata counterpart,
+    such as those from backfill_credits_from_relations_20260719.
+    """
+    from catalog.models import Item, ItemCredit
+    from catalog.search import CatalogIndex
+
+    def _canonicalize(item: Item, credits: list[ItemCredit], stale: list[int]) -> bool:
+        people: dict[tuple[str, str], set[str]] = {}
+        for c in credits:
+            if c.person:
+                people.setdefault((c.role, c.name.strip()), set()).add(c.person.url)
+        urls = {
+            (c.role, c.name.strip()): next(iter(people[(c.role, c.name.strip())]))
+            for c in credits
+            if c.pk in stale and c.person and len(people[(c.role, c.name.strip())]) == 1
+        }
+        if not urls:
+            return False
+        changed = False
+        for field, role in item.CREDIT_FIELD_MAPPING.items():
+            values = getattr(item, field, None) or []
+            if isinstance(values, str):
+                values = [values]
+            new_values: list = []
+            for v in values:
+                name = (v.get("name") if isinstance(v, dict) else str(v or "")) or ""
+                url = urls.get((role, name.strip()))
+                if not url:
+                    new_values.append(v)
+                elif isinstance(v, dict):
+                    new_values.append({**v, "name": url})
+                else:
+                    new_values.append(url)
+            if new_values != values:
+                setattr(item, field, new_values)
+                changed = True
+        return changed
+
+    def _duplicate_pks(credits: list[ItemCredit]) -> list[int]:
+        linked_names = {
+            (c.role, c.name.strip(), c.character_name or "")
+            for c in credits
+            if c.person_id
+        }
+        seen: set[tuple[str, int | str, str]] = set()
+        stale: list[int] = []
+        for c in credits:
+            character = c.character_name or ""
+            name = c.name.strip()
+            if not c.person_id and (c.role, name, character) in linked_names:
+                stale.append(c.pk)
+                continue
+            key = (c.role, c.person_id or name, character)
+            if key in seen:
+                stale.append(c.pk)
+            else:
+                seen.add(key)
+        return stale
+
+    dup_person = (
+        ItemCredit.objects.filter(person__isnull=False)
+        .values("item_id", "role", "person_id")
+        .annotate(n=models.Count("pk"))
+        .filter(n__gt=1)
+    )
+    # Legacy rows may carry whitespace; group by the stripped name.
+    dup_name = (
+        ItemCredit.objects.annotate(stripped=Trim("name"))
+        .values("item_id", "role", "stripped")
+        .annotate(n=models.Count("pk"))
+        .filter(n__gt=1)
+    )
+    item_ids: set[int] = set()
+    # TRIM only removes spaces, while the Python check strips all whitespace;
+    # items with any such row form a superset for that check.
+    whitespace = (
+        ItemCredit.objects.filter(name__regex=r"(^\s|\s$)")
+        .values_list("item_id", flat=True)
+        .distinct()
+    )
+    for row in dup_person.iterator():
+        item_ids.add(row["item_id"])
+    for row in dup_name.iterator():
+        item_ids.add(row["item_id"])
+    item_ids.update(whitespace.iterator())
+    ordered = sorted(item_ids)
+    logger.warning(f"dedupe_credits: {len(ordered)} items with candidate duplicates")
+    if dry_run:
+        return
+    index = CatalogIndex.instance()
+    if not index.initialize_collection(max_wait=30):
+        logger.error("Index is not ready, migration aborted.")
+        return
+    sentry_count("migration", attributes={"name": "catalog.dedupe_credits.start"})
+    removed = 0
+    with tqdm(total=len(ordered), desc="dedupe_credits") as pbar:
+        for i in range(0, len(ordered), batch_size):
+            chunk = ordered[i : i + batch_size]
+            by_item: dict[int, list[ItemCredit]] = {}
+            for c in (
+                ItemCredit.objects.filter(item_id__in=chunk)
+                .select_related("person")
+                .order_by("item_id", "role", "order", "pk")
+            ):
+                by_item.setdefault(c.item_id, []).append(c)
+            stale_by_item = {
+                item_id: pks
+                for item_id, credits in by_item.items()
+                if (pks := _duplicate_pks(credits))
+            }
+            if stale_by_item:
+                # deleted or merged items lose their duplicate rows too, but
+                # their metadata and search documents stay untouched
+                live = Item.objects.filter(
+                    pk__in=list(stale_by_item),
+                    is_deleted=False,
+                    merged_to_item__isnull=True,
+                )
+                live_ids = list(live.values_list("pk", flat=True))
+                for item in live:
+                    if _canonicalize(item, by_item[item.pk], stale_by_item[item.pk]):
+                        item.save(update_fields=["metadata"])
+                stale = [pk for pks in stale_by_item.values() for pk in pks]
+                ItemCredit.objects.filter(pk__in=stale).delete()
+                removed += len(stale)
+                # search docs carry credit names; rebuild them from fresh rows
+                if live_ids:
+                    fresh = Item.objects.filter(pk__in=live_ids)
+                    index.replace_docs(index.items_to_docs(fresh))
+            pbar.update(len(chunk))
+            sentry_count(
+                "migration", len(chunk), attributes={"name": "catalog.dedupe_credits"}
+            )
+    sentry_count("migration", attributes={"name": "catalog.dedupe_credits.end"})
+    logger.warning(
+        f"dedupe_credits complete: {len(ordered)} items checked, "
+        f"{removed} duplicate credits removed."
+    )

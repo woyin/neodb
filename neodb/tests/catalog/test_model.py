@@ -16,6 +16,7 @@ from catalog.models import (
     TVShow,
 )
 from catalog.models.people import People
+from common.models import uniq
 from common.models.jsondata import decrypt_str, encrypt_str
 
 
@@ -162,6 +163,295 @@ class TestSyncCreditsFromMetadata:
         perf.sync_credits_from_metadata()
         perf.refresh_from_db()
         assert perf.actor == [{"name": person.url, "role": "Hero"}]
+
+    def test_strips_whitespace_and_persists_jsondata(self):
+        m = self._make_movie()
+        m.director = ["Alice ", " Bob"]
+        m.save()
+        m.sync_credits_from_metadata()
+        m.refresh_from_db()
+        assert m.director == ["Alice", "Bob"]
+        assert [c.name for c in m.credits.filter(role=CreditRole.Director)] == [
+            "Alice",
+            "Bob",
+        ]
+
+    def test_legacy_unstripped_linked_credit_keeps_link(self):
+        person = People.objects.create(people_type="person", title="Alice")
+        person.localized_name = [{"lang": "en", "text": "Alice"}]
+        person.save()
+        m = self._make_movie()
+        m.director = ["Alice"]
+        m.save()
+        legacy = ItemCredit.objects.create(
+            item=m, role=CreditRole.Director, name="Alice ", person=person, order=0
+        )
+        m.sync_credits_from_metadata()
+        m.refresh_from_db()
+        assert m.director == [person.url]
+        credits = list(m.credits.filter(role=CreditRole.Director))
+        assert [c.pk for c in credits] == [legacy.pk]
+        assert credits[0].person == person
+
+    def test_legacy_unstripped_unlinked_credit_is_renamed_in_place(self):
+        m = self._make_movie()
+        m.director = ["Alice"]
+        m.save()
+        legacy = ItemCredit.objects.create(
+            item=m, role=CreditRole.Director, name="Alice ", order=0
+        )
+        m.sync_credits_from_metadata()
+        credits = list(m.credits.filter(role=CreditRole.Director))
+        assert [(c.pk, c.name) for c in credits] == [(legacy.pk, "Alice")]
+
+    def test_alias_of_linked_person_resolves_after_overwrite(self):
+        person = People.objects.create(people_type="person", title="Alice")
+        person.localized_name = [
+            {"lang": "en", "text": "Alice"},
+            {"lang": "zh-cn", "text": "爱丽丝"},
+        ]
+        person.save()
+        m = self._make_movie()
+        m.director = [person.url]
+        m.save()
+        m.sync_credits_from_metadata()
+        credit = m.credits.get(role=CreditRole.Director)
+        # an overwrite refetch supplies a different localized name
+        m.director = ["爱丽丝"]
+        m.save()
+        m.sync_credits_from_metadata()
+        m.refresh_from_db()
+        assert m.director == [person.url]
+        credits = list(m.credits.filter(role=CreditRole.Director))
+        assert [c.pk for c in credits] == [credit.pk]
+
+    def test_stored_credit_name_beats_another_persons_alias(self):
+        p1 = People.objects.create(people_type="person", title="Alice")
+        p1.localized_name = [{"lang": "en", "text": "Alice"}]
+        p1.save()
+        p2 = People.objects.create(people_type="person", title="Bob")
+        p2.localized_name = [
+            {"lang": "en", "text": "Bob"},
+            {"lang": "en", "text": "Alice"},
+        ]
+        p2.save()
+        m = self._make_movie()
+        m.director = ["Alice", "Bob"]
+        m.save()
+        alice = ItemCredit.objects.create(
+            item=m, role=CreditRole.Director, name="Alice", person=p1, order=0
+        )
+        bob = ItemCredit.objects.create(
+            item=m, role=CreditRole.Director, name="Bob", person=p2, order=1
+        )
+        m.sync_credits_from_metadata()
+        m.refresh_from_db()
+        assert m.director == [p1.url, p2.url]
+        credits = list(m.credits.filter(role=CreditRole.Director))
+        assert [(c.pk, c.person_id) for c in credits] == [
+            (alice.pk, p1.pk),
+            (bob.pk, p2.pk),
+        ]
+
+    def test_alias_shared_with_incoming_person_stays_plain(self):
+        p1 = People.objects.create(people_type="person", title="Alice")
+        p1.localized_name = [
+            {"lang": "en", "text": "Alice"},
+            {"lang": "fr", "text": "Alicia"},
+        ]
+        p1.save()
+        p2 = People.objects.create(people_type="person", title="Bob")
+        p2.localized_name = [
+            {"lang": "en", "text": "Bob"},
+            {"lang": "fr", "text": "Alicia"},
+        ]
+        p2.save()
+        m = self._make_movie()
+        m.director = [p1.url]
+        m.save()
+        m.sync_credits_from_metadata()
+        # one edit adds Bob by URL and a plain "Alicia" that fits both
+        m.director = [p1.url, p2.url, "Alicia"]
+        m.save()
+        m.sync_credits_from_metadata()
+        m.refresh_from_db()
+        assert m.director == [p1.url, p2.url, "Alicia"]
+        rows = list(m.credits.filter(role=CreditRole.Director))
+        assert [r.person_id for r in rows] == [p1.pk, p2.pk, None]
+
+    def test_alias_shared_by_two_linked_people_stays_plain(self):
+        names = [{"lang": "en", "text": "Alice"}, {"lang": "fr", "text": "Alicia"}]
+        p1 = People.objects.create(people_type="person", title="Alice")
+        p1.localized_name = names
+        p1.save()
+        p2 = People.objects.create(people_type="person", title="Alice")
+        p2.localized_name = names
+        p2.save()
+        m = self._make_movie()
+        m.director = [p1.url, p2.url, "Alicia"]
+        m.save()
+        m.sync_credits_from_metadata()
+        m.refresh_from_db()
+        assert m.director == [p1.url, p2.url, "Alicia"]
+        assert (
+            m.credits.filter(role=CreditRole.Director, person__isnull=True).count() == 1
+        )
+
+    def test_refetch_merge_of_unstripped_name_does_not_duplicate(self):
+        """A stored stripped name merged with the scraper's unstripped copy
+        (uniq is exact-match) must collapse to one entry and one credit."""
+        m = self._make_movie()
+        m.director = ["Alice"]
+        m.save()
+        m.sync_credits_from_metadata()
+        m.director = uniq(m.director + ["Alice "])
+        m.save()
+        m.sync_credits_from_metadata()
+        m.refresh_from_db()
+        assert m.director == ["Alice"]
+        assert m.credits.filter(role=CreditRole.Director).count() == 1
+
+    def test_two_names_resolving_to_one_person_collapse(self):
+        person = People.objects.create(people_type="person", title="Alice")
+        person.localized_name = [
+            {"lang": "en", "text": "Alice"},
+            {"lang": "zh-cn", "text": "爱丽丝"},
+        ]
+        person.save()
+        m = self._make_movie()
+        m.director = ["爱丽丝", "Alice"]
+        m.save()
+        for i, name in enumerate(["爱丽丝", "Alice"]):
+            ItemCredit.objects.create(
+                item=m, role=CreditRole.Director, name=name, person=person, order=i
+            )
+        m.sync_credits_from_metadata()
+        m.refresh_from_db()
+        assert m.director == [person.url]
+        credits = list(m.credits.filter(role=CreditRole.Director))
+        assert len(credits) == 1
+        assert credits[0].person == person
+
+    def test_linked_credit_reused_across_locales(self):
+        person = People.objects.create(people_type="person", title="Alice")
+        person.localized_name = [
+            {"lang": "en", "text": "Alice"},
+            {"lang": "zh-cn", "text": "爱丽丝"},
+        ]
+        person.save()
+        m = self._make_movie()
+        m.director = [person.url]
+        m.save()
+        with translation.override("en"):
+            m.sync_credits_from_metadata()
+        credit = m.credits.get(role=CreditRole.Director)
+        assert credit.name == "Alice"
+        with translation.override("zh-hans"):
+            m.sync_credits_from_metadata()
+        credits = list(m.credits.filter(role=CreditRole.Director))
+        assert [c.pk for c in credits] == [credit.pk]
+        assert credits[0].name == "Alice"
+
+    def test_reconcile_prefers_row_with_same_character(self):
+        person = People.objects.create(people_type="person", title="Star")
+        person.localized_name = [{"lang": "en", "text": "Star"}]
+        person.save()
+        perf = Performance.objects.create(title="Show")
+        perf.localized_title = [{"lang": "en", "text": "Show"}]
+        perf.actor = [{"name": person.url, "role": "Villain"}]
+        perf.save()
+        ItemCredit.objects.create(
+            item=perf,
+            role=CreditRole.Actor,
+            name="Star",
+            character_name="Hero",
+            person=person,
+            order=0,
+        )
+        villain = ItemCredit.objects.create(
+            item=perf,
+            role=CreditRole.Actor,
+            name="Star",
+            character_name="Villain",
+            person=person,
+            order=1,
+        )
+        perf.sync_credits_from_metadata()
+        rows = list(perf.credits.filter(role=CreditRole.Actor))
+        assert [(c.pk, c.character_name) for c in rows] == [(villain.pk, "Villain")]
+
+    def test_same_person_two_characters_rows_stable(self):
+        person = People.objects.create(people_type="person", title="Star")
+        person.localized_name = [{"lang": "en", "text": "Star"}]
+        person.save()
+        perf = Performance.objects.create(title="Show")
+        perf.localized_title = [{"lang": "en", "text": "Show"}]
+        perf.actor = [
+            {"name": person.url, "role": "Hero"},
+            {"name": person.url, "role": "Villain"},
+        ]
+        perf.save()
+        perf.sync_credits_from_metadata()
+        pks = sorted(perf.credits.values_list("pk", flat=True))
+        perf.sync_credits_from_metadata()
+        assert sorted(perf.credits.values_list("pk", flat=True)) == pks
+
+    def test_actor_same_person_different_characters_kept(self):
+        person = People.objects.create(people_type="person", title="Star")
+        person.localized_name = [{"lang": "en", "text": "Star"}]
+        person.save()
+        perf = Performance.objects.create(title="Show")
+        perf.localized_title = [{"lang": "en", "text": "Show"}]
+        perf.actor = [
+            {"name": person.url, "role": "Hero"},
+            {"name": person.url, "role": "Villain"},
+        ]
+        perf.save()
+        perf.sync_credits_from_metadata()
+        perf.refresh_from_db()
+        assert len(perf.actor) == 2
+        assert perf.credits.filter(role=CreditRole.Actor).count() == 2
+
+    def test_edit_form_links_credit_despite_whitespace(self):
+        """Regression: a scraper left a trailing space in jsondata, the
+        credit was stored stripped and later linked to a People by
+        _link_credits, so the editor showed the plain name."""
+        from catalog.forms import CatalogForms
+
+        person = People.objects.create(people_type="person", title="Alice")
+        person.localized_name = [{"lang": "en", "text": "Alice"}]
+        person.save()
+        m = self._make_movie()
+        m.director = ["Alice "]
+        m.save()
+        ItemCredit.objects.create(
+            item=m, role=CreditRole.Director, name="Alice", person=person, order=0
+        )
+        form = CatalogForms["Movie"](instance=m)
+        assert form.initial["director"] == [person.url]
+        m.refresh_from_db()
+        assert m.director == ["Alice "]
+
+    def test_edit_form_links_dict_credit_despite_whitespace(self):
+        from catalog.forms import CatalogForms
+
+        person = People.objects.create(people_type="person", title="Star")
+        person.localized_name = [{"lang": "en", "text": "Star"}]
+        person.save()
+        perf = Performance.objects.create(title="Show")
+        perf.localized_title = [{"lang": "en", "text": "Show"}]
+        perf.actor = [{"name": "Star ", "role": "Hero"}]
+        perf.save()
+        ItemCredit.objects.create(
+            item=perf,
+            role=CreditRole.Actor,
+            name="Star",
+            character_name="Hero",
+            person=person,
+            order=0,
+        )
+        form = CatalogForms["Performance"](instance=perf)
+        assert form.initial["actor"] == [{"name": person.url, "role": "Hero"}]
 
     def test_unmanaged_role_credits_preserved(self):
         m = self._make_movie()
