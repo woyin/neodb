@@ -116,12 +116,22 @@ django-admin makemessages --no-wrap --no-obsolete --keep-pot -l zh_Hans -l zh_Ha
 django-admin compilemessages
 ```
 
-`--no-wrap` keeps each `msgid` and `msgstr` on one line. Weblate rewraps the .po
-files that it writes. A locale that you regenerate here can therefore conflict
-with Weblate on the wrapping alone, with no change to any translation. Compare
-the two sides message by message before you resolve such a conflict, and make
-sure that no message is lost. Note that a text diff hides obsolete `#~` entries,
-which makes translations that are still present look lost.
+`--no-wrap` keeps each `msgid` and `msgstr` on one line and `--no-obsolete`
+drops removed strings. The Weblate component is configured to write the same
+form: "Long lines wrapping" is set to "Only wrap lines at newlines", "Remove
+obsolete strings" is on, and "Report msgid bugs to" is off, so that Weblate does
+not rewrite the `Report-Msgid-Bugs-To` header that `makemessages` blanks. Keep
+these two sides in sync. If one of them changes, every regenerated locale
+conflicts with Weblate on formatting alone.
+
+Weblate pushes its commits to the `weblate` branch of the fork configured as its
+push URL. Merge that branch into `main` with a merge commit, never a squash or
+rebase merge. Weblate rebases its local commits onto `main`, and it can only
+skip them when `main` already contains them. If a conflict must be resolved by
+hand, compare the two sides message by message with polib, keyed on
+`(msgctxt, msgid)`, and make sure that no translation is lost. A text diff
+hides obsolete `#~` entries, which makes translations that are still present
+look lost.
 
 Preview documentation:
 ```
