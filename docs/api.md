@@ -90,3 +90,72 @@ and the response will be returned accordingly:
 
 `url` is relative to the site; `external_acct` is deprecated in favour of
 `external_accounts`.
+
+## Webhooks
+
+An application can register one webhook URL per user it is authorized by,
+to learn about changes without polling. With the user's access token:
+
+```
+curl -H "Authorization: Bearer ACCESS_TOKEN" -X PUT -H "Content-Type: application/json" \
+  -d '{"url": "https://example.org/hook"}' https://neodb.social/api/me/webhook
+```
+
+`GET /api/me/webhook` returns the current URL and whether it is disabled,
+`DELETE /api/me/webhook` removes it. Setting it needs a token with both
+`write` and `push` scopes. Only https URLs resolving to public addresses are
+accepted, and a user can have at most 5 webhooks across applications.
+Once the application holds no token with `push` scope for the user any more
+(revoked from the account page, via `/oauth/revoke`, or by logging out
+everywhere), its webhook is removed, at the latest when the next change
+would have been delivered.
+
+When the user's marks, reviews, notes, collections or articles change,
+a JSON document is POSTed to the URL with `Content-Type: application/json`
+and a `User-Agent` like `NeoDB/1.0 (+https://neodb.social)`:
+
+```
+{
+  "version": 1,
+  "site": "https://neodb.social",
+  "time": "2026-09-07T02:22:47+00:00",
+  "username": "alice",
+  "changes": [
+    {
+      "type": "mark",
+      "action": "update",
+      "object": {
+        "shelf_type": "progress",
+        "visibility": 0,
+        "item": {"uuid": "4upSY7ttUqa5kjvcnXflWt", "title": "Item Title", "...": "..."},
+        "comment_text": "...",
+        "rating_grade": 8,
+        "tags": ["fiction"],
+        "...": "..."
+      }
+    }
+  ]
+}
+```
+
+- `version` is bumped on incompatible changes to this document.
+- `username` is the account whose content changed, as in `/api/me`.
+- `changes` is a list. Today each delivery carries one entry; consumers
+  should nonetheless loop over it. A ping from the developer console sends
+  the same document with an empty list.
+- `type` is one of `mark`, `review`, `note`, `collection`, `article`;
+  `action` is `create`, `update` or `delete`.
+- On `create` and `update`, `object` is exactly what the API returns for the
+  piece (as in `GET /api/me/shelf/item/{uuid}`, `/api/me/note/item/{uuid}/`,
+  `/api/review/{uuid}`, `/api/collection/{uuid}`, `/api/article/{uuid}`),
+  minus fields the API documents as deprecated.
+- On `delete`, `object` only identifies the piece: `{"uuid": "..."}`, or
+  `{"item": {"uuid": "..."}}` for a mark, since marks are addressed by item.
+
+One delivery is sent per change: editing a mark's shelf, comment, rating and
+tags together yields one `mark` `update`. Delivery is one attempt, without
+retry or signature. After 100 consecutive failures (counted over a week) the
+webhook is disabled until it is set again.
+
+Users can see which of their authorized applications have a webhook on the
+account page, and set one for the Dev Console token on the developer page.

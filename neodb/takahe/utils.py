@@ -19,6 +19,9 @@ from common.models import SiteConfig
 
 from .models import *
 
+DEV_CONSOLE_CLIENT_ID = "app-00000000000-dev"
+DEV_CONSOLE_SCOPES = ["read", "write", "push"]
+
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
@@ -628,12 +631,13 @@ class Takahe:
     ) -> Token:
         import secrets as sec
 
-        scopes = "read write push" if scope == "write" else "read"
+        # a list, as takahe's OAuth flow stores it (`scope.split()`)
+        scopes = ["read", "write", "push"] if scope == "write" else ["read"]
         app = Application.objects.create(
             client_id=sec.token_urlsafe(32),
             client_secret=sec.token_urlsafe(32),
             redirect_uris="urn:ietf:wg:oauth:2.0:oob",
-            scopes=scopes,
+            scopes=" ".join(scopes),  # Application.scopes is text, Token's JSON
             name=name,
         )
         token = Token.objects.create(
@@ -653,12 +657,13 @@ class Takahe:
         ).select_related("application")
 
     @staticmethod
-    def revoke_token(token_pk: int, identity_pk: int) -> bool:
+    def revoke_token(token_pk: int, identity_pk: int) -> int | None:
+        """Delete the token; returns its application id, None if not found."""
         token = Token.objects.filter(pk=token_pk, identity_id=identity_pk).first()
         if token:
             token.delete()
-            return True
-        return False
+            return token.application_id
+        return None
 
     @staticmethod
     def get_follow_block_mute_counts(identity_pk: int) -> dict[str, int]:
@@ -1318,16 +1323,19 @@ class Takahe:
 
     @staticmethod
     def refresh_token(app: Application, owner_pk: int, user_pk) -> str:
-        tk = Token.objects.filter(application=app, identity_id=owner_pk).first()
-        if tk:
-            tk.delete()
-        return Token.objects.create(
-            application=app,
-            identity_id=owner_pk,
-            user_id=user_pk,
-            scopes=["read", "write"],
-            token=secrets.token_urlsafe(43),
-        ).token
+        # atomic, so the app never appears token-less to a concurrent reader
+        # (webhook delivery drops webhooks of apps without a token)
+        with transaction.atomic(using="takahe"):
+            tk = Token.objects.filter(application=app, identity_id=owner_pk).first()
+            if tk:
+                tk.delete()
+            return Token.objects.create(
+                application=app,
+                identity_id=owner_pk,
+                user_id=user_pk,
+                scopes=list(DEV_CONSOLE_SCOPES),
+                token=secrets.token_urlsafe(43),
+            ).token
 
     @staticmethod
     def get_token(token: str) -> Token | None:

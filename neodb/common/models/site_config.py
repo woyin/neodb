@@ -159,6 +159,9 @@ class SiteConfig(models.Model):
         # Cleanup
         task_cleanup_days: int = 28
 
+        # Webhooks
+        webhook_timeout: int = 1000
+
         # Advanced / Operational
         # auto-generated ES256 key (JWK) for the ATProto OAuth client;
         # managed by mastodon.models.bluesky_oauth, not exposed in the UI

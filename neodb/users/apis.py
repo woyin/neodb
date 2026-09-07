@@ -4,9 +4,17 @@ from django.conf import settings
 from ninja import Schema, Status
 from ninja.schema import Field
 
-from common.api import NOT_FOUND, OptionalOAuthAccessTokenAuth, Result, api
+from common.api import NOT_FOUND, OK, OptionalOAuthAccessTokenAuth, Result, api
 from mastodon.models import SocialAccount
-from users.models import APIdentity
+from users.models import APIdentity, Webhook
+from users.models.webhook import (
+    MAX_WEBHOOKS_PER_USER,
+    WebhookLimitReached,
+    remove_webhook,
+    scope_set,
+    set_webhook,
+    validate_webhook_url,
+)
 
 
 class TokenSchema(Schema):
@@ -52,6 +60,15 @@ class UserSchema(UserIdentitySchema):
     external_acct: str | None = Field(deprecated=True)
     external_accounts: list[ExternalAccountSchema]
     roles: list[Literal["admin", "staff"]]
+
+
+class WebhookSchema(Schema):
+    url: str
+    disabled: bool
+
+
+class WebhookInSchema(Schema):
+    url: str
 
 
 class PreferenceSchema(Schema):
@@ -105,6 +122,69 @@ def me(request):
 )
 def preference(request):
     return Status(200, request.user.preference)
+
+
+@api.get(
+    "/me/webhook",
+    response={200: WebhookSchema, 401: Result, 404: Result},
+    summary="Get this application's webhook for the current user",
+    tags=["user"],
+)
+def get_webhook(request):
+    """
+    Each application (the one this access token belongs to) may register one
+    webhook URL per user. Changes to the user's marks, reviews, notes,
+    collections and articles are POSTed to it as a JSON document:
+    `{"version": 1, "site": ..., "time": ..., "username": ...,
+    "changes": [{"type": "mark", "action": "update", "object": {...}}]}`,
+    where `object` is the API response for the piece (only its uuid on
+    delete). See the Webhooks section of the API documentation.
+    `disabled` becomes true after repeated delivery failures.
+    """
+    webhook = Webhook.objects.filter(
+        user=request.user, application_id=request.application_id
+    ).first()
+    if not webhook:
+        return NOT_FOUND
+    return Status(200, webhook)
+
+
+@api.put(
+    "/me/webhook",
+    response={200: WebhookSchema, 400: Result, 401: Result, 403: Result},
+    summary="Set this application's webhook for the current user",
+    tags=["user"],
+)
+def put_webhook(request, w_in: WebhookInSchema):
+    """
+    Register or replace the webhook URL. Only https URLs resolving to public
+    addresses are accepted. Setting it again re-enables a disabled webhook.
+    Requires the `push` scope as well; a user can have at most 5 webhooks
+    across applications.
+    """
+    if "push" not in scope_set(getattr(request, "token_scopes", None)):
+        return Status(403, {"message": "push scope required"})
+    url = w_in.url.strip()
+    if not validate_webhook_url(url):
+        return Status(400, {"message": "Invalid webhook URL"})
+    try:
+        webhook = set_webhook(request.user, request.application_id, url)
+    except WebhookLimitReached:
+        return Status(
+            403, {"message": f"At most {MAX_WEBHOOKS_PER_USER} webhooks per user"}
+        )
+    return Status(200, webhook)
+
+
+@api.delete(
+    "/me/webhook",
+    response={200: Result, 401: Result},
+    summary="Remove this application's webhook for the current user",
+    tags=["user"],
+)
+def delete_webhook(request):
+    remove_webhook(request.user.pk, request.application_id)
+    return OK
 
 
 @api.get(

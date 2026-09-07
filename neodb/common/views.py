@@ -1,10 +1,11 @@
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
-from django.core.exceptions import DisallowedHost
+from django.core.exceptions import BadRequest, DisallowedHost
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.views.decorators.http import require_http_methods
 
 from boofilsic import __version__
 from catalog.views import people_search as catalog_people_search, discover
@@ -12,8 +13,18 @@ from catalog.views import search as catalog_search
 from journal.views import search as journal_search
 from social.views import search as timeline_search
 from takahe.models import Domain
-from takahe.utils import Takahe
+from takahe.utils import DEV_CONSOLE_CLIENT_ID, DEV_CONSOLE_SCOPES, Takahe
 from users.models.user import User
+from users.models.webhook import (
+    MAX_WEBHOOKS_PER_USER,
+    Webhook,
+    WebhookLimitReached,
+    has_live_token,
+    ping_webhooks,
+    remove_webhook,
+    set_webhook,
+    validate_webhook_url,
+)
 
 from .api import api
 from .validators import get_safe_redirect_url
@@ -162,30 +173,79 @@ def error_500(request, exception=None):
     return _error_response(request, 500, exception, "something wrong")
 
 
+def _dev_console_app():
+    return Takahe.get_or_create_app(
+        "Dev Console",
+        settings.SITE_INFO["site_url"],
+        "",
+        owner_pk=0,
+        scopes=" ".join(DEV_CONSOLE_SCOPES),
+        client_id=DEV_CONSOLE_CLIENT_ID,
+    )
+
+
 def console(request):
     token = None
     if request.method == "POST":
         if not request.user.is_authenticated:
             return redirect(reverse("users:login"))
-        app = Takahe.get_or_create_app(
-            "Dev Console",
-            settings.SITE_INFO["site_url"],
-            "",
-            owner_pk=0,
-            client_id="app-00000000000-dev",
-        )
+        app = _dev_console_app()
         token = Takahe.refresh_token(app, request.user.identity.pk, request.user.pk)
     show_debug_tools = settings.DEBUG or (
         request.user.is_authenticated and request.user.is_superuser
     )
+    webhook = None
+    has_token = False
+    if request.user.is_authenticated:
+        app_id = _dev_console_app().pk
+        webhook = Webhook.objects.filter(
+            user=request.user, application_id=app_id
+        ).first()
+        has_token = has_live_token(request.user.identity.pk, app_id)
+    pinged = request.GET.get("pinged")
     context = {
         "version": settings.NEODB_VERSION,
         "api": api,
         "token": token,
+        "webhook": webhook,
+        "has_token": has_token,
+        "webhook_count": request.user.webhooks.filter(disabled=False).count()
+        if request.user.is_authenticated
+        else 0,
+        "pinged": int(pinged) if pinged and pinged.isdigit() else None,
         "openapi_json_url": reverse(f"{api.urls_namespace}:openapi-json"),
         "show_debug_tools": show_debug_tools,
     }
     return render(request, "console.html", context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def console_webhook(request):
+    """Set or clear the webhook of the Dev Console app for the current user."""
+    url = request.POST.get("url", "").strip()
+    app = _dev_console_app()
+    if not url:
+        remove_webhook(request.user.pk, app.pk)
+    elif not has_live_token(request.user.identity.pk, app.pk):
+        # delivery drops webhooks of apps without a token; refuse up front
+        raise BadRequest("Generate a test access token first")
+    elif validate_webhook_url(url):
+        try:
+            set_webhook(request.user, app.pk, url)
+        except WebhookLimitReached:
+            raise BadRequest(f"At most {MAX_WEBHOOKS_PER_USER} webhooks per user")
+    else:
+        raise BadRequest("Invalid webhook URL")
+    return redirect(reverse("common:developer"))
+
+
+@login_required
+@require_http_methods(["POST"])
+def console_webhook_ping(request):
+    """Send a test delivery (empty `changes`) to all webhooks of the user."""
+    count = ping_webhooks(request.user)
+    return redirect(reverse("common:developer") + f"?pinged={count}")
 
 
 def oauth_protected_resource(request):
@@ -200,7 +260,7 @@ def oauth_protected_resource(request):
         "token_endpoint": f"{base_url}/oauth/token",
         "revocation_endpoint": f"{base_url}/oauth/revoke",
         "token_types_supported": ["bearer"],
-        "scopes_supported": ["read", "write"],
+        "scopes_supported": ["read", "write", "push"],
         "resource_server": {
             "name": SiteConfig.system.site_name,
             "description": SiteConfig.system.site_description,
@@ -237,7 +297,7 @@ def oauth_authorization_server(request):
         # Supported response types
         "response_types_supported": ["code"],
         # Supported scopes
-        "scopes_supported": ["read", "write"],
+        "scopes_supported": ["read", "write", "push"],
         # Token endpoint authentication methods
         "token_endpoint_auth_methods_supported": [
             "client_secret_basic",

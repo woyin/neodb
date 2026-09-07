@@ -1,0 +1,945 @@
+import json
+import socket
+from unittest.mock import patch
+
+import django_rq
+import httpx
+import pytest
+from django.conf import settings
+from django.test import override_settings
+from django.urls import reverse
+from django.utils import timezone
+
+from catalog.models import Edition
+from common.validators import _host_cache
+from journal.models import Collection, Mark, Note, Review, ShelfType
+from takahe.models import Token
+from takahe.utils import Takahe
+from users.jobs.migrations import normalize_token_scopes_20260907
+from users.models import User, Webhook
+from users.models.webhook import (
+    MAX_WEBHOOKS_PER_USER,
+    _bump_failures,
+    _deliver_webhook,
+    _FAIL_LIMIT,
+    _post_webhook,
+    clear_webhook_cache,
+    clear_webhook_failures,
+    dispatch_webhook,
+    has_active_webhook,
+    remove_webhook,
+    scope_set,
+    set_webhook,
+    validate_webhook_url,
+)
+
+_WEBHOOK_API = "/api/me/webhook"
+
+
+@pytest.fixture
+def user():
+    u = User.register(email="wh@example.com", username="whuser")
+    clear_webhook_cache(u.pk)
+    yield u
+    clear_webhook_cache(u.pk)
+
+
+@pytest.fixture
+def token(user):
+    # a personal token: its own Application, held only by this user
+    return Takahe.create_personal_token(user.identity.pk, user.pk, "hook app", "write")
+
+
+@pytest.fixture
+def webhook(user, token):
+    w = set_webhook(user, token.application.pk, "https://hook.example.org/x")
+    clear_webhook_failures(w.pk)
+    yield w
+    clear_webhook_failures(w.pk)
+    clear_webhook_cache(user.pk)
+
+
+def _api(client, method: str, token: Token, data: dict | None = None):
+    kwargs = {"HTTP_AUTHORIZATION": f"Bearer {token.token}"}
+    if data is not None:
+        kwargs["data"] = json.dumps(data)
+        kwargs["content_type"] = "application/json"
+    return getattr(client, method)(_WEBHOOK_API, **kwargs)
+
+
+@pytest.fixture
+def book():
+    return Edition.objects.create(title="Webhook Test Book")
+
+
+class _FakeQueue:
+    def __init__(self):
+        self.jobs = []
+
+    def enqueue(self, func, *args, **kwargs):
+        self.jobs.append((func, args))
+
+
+@pytest.fixture
+def queue(monkeypatch):
+    # django_rq is a shared module: route only the webhook queue to the fake
+    q = _FakeQueue()
+    real_get_queue = django_rq.get_queue
+    monkeypatch.setattr(
+        "users.models.webhook.django_rq.get_queue",
+        lambda name: q if name == "webhook" else real_get_queue(name),
+    )
+    return q
+
+
+def _make_addr_info(ip: str):
+    return [(socket.AF_INET, socket.SOCK_STREAM, 0, "", (ip, 0))]
+
+
+class TestValidateWebhookUrl:
+    def setup_method(self):
+        _host_cache.clear()
+
+    @override_settings(DEBUG=False)
+    def test_https_public_host_accepted(self):
+        with patch("socket.getaddrinfo", return_value=_make_addr_info("93.184.216.34")):
+            assert validate_webhook_url("https://hooks.example.com/cb") is True
+
+    @override_settings(DEBUG=False)
+    def test_explicit_port_accepted(self):
+        with patch("socket.getaddrinfo", return_value=_make_addr_info("93.184.216.34")):
+            assert validate_webhook_url("https://hooks2.example.com:8443/cb") is True
+
+    @override_settings(DEBUG=False)
+    def test_http_rejected(self):
+        assert validate_webhook_url("http://hooks.example.com/cb") is False
+
+    @override_settings(DEBUG=False)
+    def test_private_ip_rejected(self):
+        with patch("socket.getaddrinfo", return_value=_make_addr_info("192.168.1.1")):
+            assert validate_webhook_url("https://internal.example.com/cb") is False
+
+    @override_settings(DEBUG=False)
+    def test_garbage_rejected(self):
+        assert validate_webhook_url("") is False
+        assert validate_webhook_url("not a url") is False
+        assert validate_webhook_url("https://" + "a" * 1000) is False
+
+    @override_settings(DEBUG=True)
+    def test_debug_allows_local_http(self):
+        assert validate_webhook_url("http://localhost:8000/cb") is True
+        assert validate_webhook_url("ftp://example.com/") is False
+
+
+def _only_change(queue) -> dict:
+    assert len(queue.jobs) == 1
+    func, args = queue.jobs[0]
+    assert func is _deliver_webhook
+    payload = args[1]
+    assert payload["version"] == 1
+    assert payload["site"] == settings.SITE_INFO["site_url"]
+    assert payload["time"]
+    assert len(payload["changes"]) == 1
+    return payload["changes"][0]
+
+
+def _api_json(client, token: Token, path: str) -> dict:
+    r = client.get(path, HTTP_AUTHORIZATION=f"Bearer {token.token}")
+    assert r.status_code == 200, r.content
+    data = r.json()
+    # the API still returns these deprecated fields; webhooks do not
+    for entry in data.get("data", [data]):
+        for k in ("display_title", "brief"):
+            entry.get("item", {}).pop(k, None)
+    return data
+
+
+@pytest.mark.django_db(databases="__all__")
+class TestDispatch:
+    def test_no_webhook_no_enqueue(
+        self, user, book, queue, django_capture_on_commit_callbacks
+    ):
+        with django_capture_on_commit_callbacks(execute=True):
+            Mark(user.identity, book).update(ShelfType.WISHLIST)
+        assert queue.jobs == []
+
+    def test_mark_create_then_update(
+        self,
+        user,
+        book,
+        token,
+        webhook,
+        queue,
+        client,
+        django_capture_on_commit_callbacks,
+    ):
+        with django_capture_on_commit_callbacks(execute=True):
+            Mark(user.identity, book).update(ShelfType.WISHLIST, tags=["x"])
+        assert queue.jobs[0][1][0] == user.pk
+        assert queue.jobs[0][1][1]["username"] == user.identity.handle
+        change = _only_change(queue)
+        assert change["type"] == "mark"
+        assert change["action"] == "create"
+        obj = change["object"]
+        assert obj["shelf_type"] == "wishlist"
+        assert obj["item"]["uuid"] == book.uuid
+        assert obj["tags"] == ["x"]
+        assert "display_title" not in obj["item"]
+        # same JSON as the API returns for the mark
+        assert obj == _api_json(client, token, f"/api/me/shelf/item/{book.uuid}")
+
+        queue.jobs.clear()
+        with django_capture_on_commit_callbacks(execute=True):
+            Mark(user.identity, book).update(ShelfType.PROGRESS, comment_text="hi")
+        change = _only_change(queue)
+        assert change["action"] == "update"
+        assert change["object"]["shelf_type"] == "progress"
+        assert change["object"]["comment_text"] == "hi"
+
+    def test_unmark_enqueues_delete(
+        self, user, book, webhook, queue, django_capture_on_commit_callbacks
+    ):
+        with django_capture_on_commit_callbacks(execute=True):
+            Mark(user.identity, book).update(ShelfType.WISHLIST)
+        queue.jobs.clear()
+        with django_capture_on_commit_callbacks(execute=True):
+            Mark(user.identity, book).delete()
+        change = _only_change(queue)
+        assert change["type"] == "mark"
+        assert change["action"] == "delete"
+        assert change["object"] == {"item": {"uuid": book.uuid}}
+
+    def test_note_create_update_delete(
+        self,
+        user,
+        book,
+        token,
+        webhook,
+        queue,
+        client,
+        django_capture_on_commit_callbacks,
+    ):
+        with django_capture_on_commit_callbacks(execute=True):
+            note = Note.objects.create(
+                owner=user.identity, item=book, title="n", content="c", visibility=0
+            )
+        change = _only_change(queue)
+        assert change["type"] == "note"
+        assert change["action"] == "create"
+        assert change["object"]["uuid"] == note.uuid
+        assert change["object"]["content"] == "c"
+        listed = _api_json(client, token, f"/api/me/note/item/{book.uuid}/")
+        assert change["object"] == listed["data"][0]
+
+        queue.jobs.clear()
+        with django_capture_on_commit_callbacks(execute=True):
+            note.content = "c2"
+            note.save()
+        change = _only_change(queue)
+        assert change["action"] == "update"
+        assert change["object"]["content"] == "c2"
+
+        queue.jobs.clear()
+        with django_capture_on_commit_callbacks(execute=True):
+            note.delete()
+        change = _only_change(queue)
+        assert change["action"] == "delete"
+        assert change["object"] == {"uuid": note.uuid}
+
+    def test_collection_object_without_deprecated_fields(
+        self, user, webhook, queue, django_capture_on_commit_callbacks
+    ):
+        with django_capture_on_commit_callbacks(execute=True):
+            collection = Collection.objects.create(
+                owner=user.identity, title="my list", brief="b"
+            )
+        change = _only_change(queue)
+        assert change["type"] == "collection"
+        obj = change["object"]
+        assert obj["uuid"] == collection.uuid
+        assert obj["title"] == "my list"
+        assert obj["description"] == "b"
+        assert obj["url"] == collection.url
+        assert "brief" not in obj and "cover" not in obj
+
+    def test_review_object_without_deprecated_fields(
+        self, user, book, webhook, queue, django_capture_on_commit_callbacks
+    ):
+        with django_capture_on_commit_callbacks(execute=True):
+            review = Review.objects.create(
+                owner=user.identity, item=book, title="r", body="text", visibility=0
+            )
+        change = _only_change(queue)
+        assert change["type"] == "review"
+        obj = change["object"]
+        assert obj["uuid"] == review.uuid
+        assert obj["content"] == "text"
+        assert "body" not in obj
+        assert obj["item"]["uuid"] == book.uuid
+
+    def test_collection_counts_are_fresh_after_member_change(
+        self, user, book, webhook, queue, django_capture_on_commit_callbacks
+    ):
+        with django_capture_on_commit_callbacks(execute=True):
+            collection = Collection.objects.create(
+                owner=user.identity, title="l", brief=""
+            )
+            assert collection.item_count_by_category["book"] == 0  # cached
+            collection.append_item(book)
+        obj = queue.jobs[-1][1][1]["changes"][0]["object"]
+        assert obj["item_count_by_category"]["book"] == 1
+
+    def test_progress_change_announces_mark_update(
+        self, user, book, webhook, queue, django_capture_on_commit_callbacks
+    ):
+        with django_capture_on_commit_callbacks(execute=True):
+            Mark(user.identity, book).update(ShelfType.PROGRESS)
+        queue.jobs.clear()
+        with django_capture_on_commit_callbacks(execute=True):
+            Mark(user.identity, book).set_progress("page", "10")
+        change = _only_change(queue)
+        assert change["type"] == "mark"
+        assert change["action"] == "update"
+        assert change["object"]["shelf_type"] == "progress"
+
+    def test_disabled_webhook_not_dispatched(
+        self, user, book, webhook, queue, django_capture_on_commit_callbacks
+    ):
+        webhook.disabled = True
+        webhook.save(update_fields=["disabled"])
+        clear_webhook_cache(user.pk)
+        with django_capture_on_commit_callbacks(execute=True):
+            Mark(user.identity, book).update(ShelfType.WISHLIST)
+        assert queue.jobs == []
+
+    def test_dispatch_helper_gates_on_cache(
+        self, user, webhook, queue, django_capture_on_commit_callbacks
+    ):
+        assert has_active_webhook(user.pk) is True
+        with django_capture_on_commit_callbacks(execute=True):
+            dispatch_webhook(user.pk, "u", [{"type": "note", "action": "create"}])
+        assert len(queue.jobs) == 1
+        assert queue.jobs[0][1][1]["username"] == "u"
+
+
+@pytest.mark.django_db(databases="__all__")
+class TestDeliver:
+    def test_success_clears_counter(self, user, webhook, monkeypatch):
+        sent = []
+
+        def fake_post(url, payload, timeout):
+            sent.append((url, payload))
+            return True
+
+        monkeypatch.setattr("users.models.webhook._post_webhook", fake_post)
+        _bump_failures(webhook.pk)
+        _deliver_webhook(user.pk, {"type": "mark", "action": "save"})
+        assert sent == [(webhook.url, {"type": "mark", "action": "save"})]
+        assert _bump_failures(webhook.pk) == 1  # was cleared by the success
+
+    def test_failure_bumps_counter(self, user, webhook, monkeypatch):
+        def fake_post(url, payload, timeout):
+            raise OSError("connection refused")
+
+        monkeypatch.setattr("users.models.webhook._post_webhook", fake_post)
+        _deliver_webhook(user.pk, {"type": "mark", "action": "save"})
+        assert _bump_failures(webhook.pk) == 2
+
+    def test_unsuccessful_response_bumps_counter(self, user, webhook, monkeypatch):
+        monkeypatch.setattr(
+            "users.models.webhook._post_webhook", lambda url, payload, timeout: False
+        )
+        _deliver_webhook(user.pk, {"type": "mark", "action": "save"})
+        assert _bump_failures(webhook.pk) == 2
+
+    def test_disabled_after_limit(self, user, webhook, monkeypatch):
+        monkeypatch.setattr(
+            "users.models.webhook._post_webhook", lambda url, payload, timeout: False
+        )
+        for _ in range(_FAIL_LIMIT):
+            _bump_failures(webhook.pk)
+        _deliver_webhook(user.pk, {"type": "mark", "action": "save"})
+        webhook.refresh_from_db()
+        assert webhook.disabled is True
+        assert has_active_webhook(user.pk) is False
+
+    def test_replaced_webhook_not_disabled_by_stale_failure(
+        self, user, token, webhook, monkeypatch
+    ):
+        def failing_post(url, payload, timeout):
+            # the user replaces the URL while this delivery is in flight
+            set_webhook(user, token.application.pk, "https://hook.example.org/new")
+            return False
+
+        monkeypatch.setattr("users.models.webhook._post_webhook", failing_post)
+        for _ in range(_FAIL_LIMIT):
+            _bump_failures(webhook.pk)
+        _deliver_webhook(user.pk, {"type": "mark", "action": "save"})
+        webhook.refresh_from_db()
+        assert webhook.url == "https://hook.example.org/new"
+        assert webhook.disabled is False
+
+    def test_disabled_webhook_skipped(self, user, webhook, monkeypatch):
+        webhook.disabled = True
+        webhook.save(update_fields=["disabled"])
+        called = []
+        monkeypatch.setattr(
+            "users.models.webhook._post_webhook",
+            lambda url, payload, timeout: called.append(url) or True,
+        )
+        _deliver_webhook(user.pk, {"type": "mark", "action": "save"})
+        assert called == []
+
+    def test_revoked_application_dropped(self, user, token, webhook, monkeypatch):
+        # token gone through any path (Mastodon API, logout everywhere...):
+        # delivery removes the webhook instead of calling it
+        token.delete()
+        called = []
+        monkeypatch.setattr(
+            "users.models.webhook._post_webhook",
+            lambda url, payload, timeout: called.append(url) or True,
+        )
+        _deliver_webhook(user.pk, {"type": "mark", "action": "save"})
+        assert called == []
+        assert not Webhook.objects.filter(pk=webhook.pk).exists()
+        assert has_active_webhook(user.pk) is False
+
+    def test_oauth_revoked_token_dropped(self, user, token, webhook, monkeypatch):
+        # /oauth/revoke only stamps `revoked`, it does not delete the row
+        token.revoked = timezone.now()
+        token.save(update_fields=["revoked"])
+        called = []
+        monkeypatch.setattr(
+            "users.models.webhook._post_webhook",
+            lambda url, payload, timeout: called.append(url) or True,
+        )
+        _deliver_webhook(user.pk, {"type": "mark", "action": "save"})
+        assert called == []
+        assert not Webhook.objects.filter(pk=webhook.pk).exists()
+
+    def test_surviving_token_without_push_not_enough(
+        self, user, token, webhook, monkeypatch
+    ):
+        Token.objects.create(
+            application=token.application,
+            user_id=token.user_id,
+            identity_id=token.identity_id,
+            token="np-" + token.token,
+            scopes=["read", "write"],
+        )
+        token.delete()
+        called = []
+        monkeypatch.setattr(
+            "users.models.webhook._post_webhook",
+            lambda url, payload, timeout: called.append(url) or True,
+        )
+        _deliver_webhook(user.pk, {"type": "mark", "action": "save"})
+        assert called == []
+        assert not Webhook.objects.filter(pk=webhook.pk).exists()
+
+    def test_disabled_webhook_of_revoked_app_dropped(
+        self, user, token, webhook, monkeypatch
+    ):
+        # a disabled row must not keep taking a slot once the app is gone
+        webhook.disabled = True
+        webhook.save(update_fields=["disabled"])
+        token.delete()
+        called = []
+        monkeypatch.setattr(
+            "users.models.webhook._post_webhook",
+            lambda url, payload, timeout: called.append(url) or True,
+        )
+        _deliver_webhook(user.pk, {"type": "mark", "action": "save"})
+        assert called == []
+        assert not Webhook.objects.filter(pk=webhook.pk).exists()
+        assert has_active_webhook(user.pk) is False
+
+    def test_each_application_called_once(self, user, token, webhook, monkeypatch):
+        other = Takahe.create_personal_token(user.identity.pk, user.pk, "b", "write")
+        set_webhook(user, other.application.pk, "https://hook.example.org/b")
+        called = []
+        monkeypatch.setattr(
+            "users.models.webhook._post_webhook",
+            lambda url, payload, timeout: called.append(url) or True,
+        )
+        _deliver_webhook(user.pk, {"type": "mark", "action": "save"})
+        assert called == ["https://hook.example.org/x", "https://hook.example.org/b"]
+
+
+class TestPostWebhook:
+    def _mock_client(self, monkeypatch, handler):
+        real_client = httpx.Client
+
+        def fake_client(**kwargs):
+            kwargs["transport"] = httpx.MockTransport(handler)
+            return real_client(**kwargs)
+
+        monkeypatch.setattr("users.models.webhook.httpx.Client", fake_client)
+
+    @override_settings(DEBUG=False)
+    def test_post_pins_validated_ip(self, monkeypatch):
+        seen = []
+
+        def handler(request):
+            seen.append(request)
+            return httpx.Response(200)
+
+        self._mock_client(monkeypatch, handler)
+        with patch("socket.getaddrinfo", return_value=_make_addr_info("93.184.216.34")):
+            ok = _post_webhook(
+                "https://hooks.example.com:8443/cb?a=1", {"type": "ping"}, 1.0
+            )
+        assert ok is True
+        request = seen[0]
+        assert request.url.host == "93.184.216.34"
+        assert request.url.port == 8443
+        assert request.headers["host"] == "hooks.example.com:8443"
+        assert request.extensions.get("sni_hostname") == "hooks.example.com"
+        assert request.headers["user-agent"].startswith("NeoDB/")
+
+    @override_settings(DEBUG=False)
+    def test_post_refuses_private_resolution(self, monkeypatch):
+        seen = []
+
+        def handler(request):
+            seen.append(request)
+            return httpx.Response(200)
+
+        self._mock_client(monkeypatch, handler)
+        with patch("socket.getaddrinfo", return_value=_make_addr_info("10.0.0.8")):
+            ok = _post_webhook("https://rebind.example.com/cb", {"type": "ping"}, 1.0)
+        assert ok is False
+        assert seen == []
+
+    @override_settings(DEBUG=False)
+    @pytest.mark.parametrize(
+        "ip", ["100.64.0.1", "169.254.169.254", "127.0.0.1", "224.0.0.1", "fe80::1"]
+    )
+    def test_post_refuses_non_global_addresses(self, monkeypatch, ip):
+        seen = []
+        self._mock_client(monkeypatch, lambda request: seen.append(request))
+        with patch("socket.getaddrinfo", return_value=_make_addr_info(ip)):
+            ok = _post_webhook("https://shared.example.com/cb", {"type": "ping"}, 1.0)
+        assert ok is False
+        assert seen == []
+
+    @override_settings(DEBUG=False)
+    def test_post_reports_http_error(self, monkeypatch):
+        self._mock_client(monkeypatch, lambda request: httpx.Response(500))
+        with patch("socket.getaddrinfo", return_value=_make_addr_info("93.184.216.34")):
+            ok = _post_webhook("https://hooks.example.com/cb", {"type": "ping"}, 1.0)
+        assert ok is False
+
+    @override_settings(DEBUG=True)
+    def test_debug_posts_plain_url(self, monkeypatch):
+        seen = []
+
+        def handler(request):
+            seen.append(request)
+            return httpx.Response(200)
+
+        self._mock_client(monkeypatch, handler)
+        ok = _post_webhook("http://localhost:8000/cb", {"type": "ping"}, 1.0)
+        assert ok is True
+        assert seen[0].url.host == "localhost"
+
+
+@pytest.mark.django_db(databases="__all__")
+class TestWebhookApi:
+    @pytest.fixture(autouse=True)
+    def _accept_any_url(self, monkeypatch):
+        monkeypatch.setattr(
+            "users.apis.validate_webhook_url", lambda url: url.startswith("https://")
+        )
+
+    def test_get_without_webhook(self, client, token):
+        assert _api(client, "get", token).status_code == 404
+
+    def test_put_get_delete(self, user, client, token):
+        r = _api(client, "put", token, {"url": " https://hook.example.org/api "})
+        assert r.status_code == 200
+        assert r.json() == {"url": "https://hook.example.org/api", "disabled": False}
+        webhook = Webhook.objects.get(user=user, application_id=token.application_id)
+        assert webhook.url == "https://hook.example.org/api"
+        assert has_active_webhook(user.pk) is True
+
+        r = _api(client, "get", token)
+        assert r.status_code == 200
+        assert r.json()["url"] == "https://hook.example.org/api"
+
+        assert _api(client, "delete", token).status_code == 200
+        assert not Webhook.objects.filter(pk=webhook.pk).exists()
+        assert has_active_webhook(user.pk) is False
+
+    def test_put_replaces_and_reenables(self, user, client, token, webhook):
+        webhook.disabled = True
+        webhook.save(update_fields=["disabled"])
+        _bump_failures(webhook.pk)
+        r = _api(client, "put", token, {"url": "https://hook.example.org/new"})
+        assert r.status_code == 200
+        webhook.refresh_from_db()
+        assert webhook.url == "https://hook.example.org/new"
+        assert webhook.disabled is False
+        assert _bump_failures(webhook.pk) == 1  # counter was cleared
+        assert user.webhooks.count() == 1
+
+    def test_put_invalid_url(self, client, token):
+        r = _api(client, "put", token, {"url": "http://hook.example.org/plain"})
+        assert r.status_code == 400
+        assert not Webhook.objects.exists()
+
+    def test_scoped_to_token_application(self, user, client, token, webhook):
+        other = Takahe.create_personal_token(user.identity.pk, user.pk, "b", "write")
+        assert _api(client, "get", other).status_code == 404
+        _api(client, "put", other, {"url": "https://hook.example.org/b"})
+        assert user.webhooks.count() == 2
+        assert _api(client, "delete", other).status_code == 200
+        assert list(user.webhooks.values_list("url", flat=True)) == [webhook.url]
+
+    def test_per_user_cap(self, user, client, token, webhook):
+        tokens = [
+            Takahe.create_personal_token(user.identity.pk, user.pk, f"t{i}", "read")
+            for i in range(MAX_WEBHOOKS_PER_USER)
+        ]
+        for t in tokens:
+            t.scopes = ["read", "write", "push"]
+            t.save(update_fields=["scopes"])
+        # webhook fixture already holds one slot
+        for t in tokens[:-1]:
+            r = _api(client, "put", t, {"url": f"https://hook.example.org/{t.pk}"})
+            assert r.status_code == 200
+        r = _api(client, "put", tokens[-1], {"url": "https://hook.example.org/x"})
+        assert r.status_code == 403
+        assert user.webhooks.count() == MAX_WEBHOOKS_PER_USER
+        # replacing an existing one is still allowed at the cap
+        r = _api(client, "put", token, {"url": "https://hook.example.org/again"})
+        assert r.status_code == 200
+        assert user.webhooks.count() == MAX_WEBHOOKS_PER_USER
+        # freeing a slot lets the rejected app in
+        assert _api(client, "delete", tokens[0]).status_code == 200
+        r = _api(client, "put", tokens[-1], {"url": "https://hook.example.org/x"})
+        assert r.status_code == 200
+
+    def test_cap_frees_slots_of_revoked_apps(self, user, client, token, webhook):
+        # five webhooks whose apps hold no push token any more (revoked via
+        # OAuth, rows possibly disabled): a new app must still get in
+        for i in range(MAX_WEBHOOKS_PER_USER):
+            Webhook.objects.create(
+                user=user,
+                application_id=400000 + i,
+                url=f"https://h.example/{i}",
+                disabled=bool(i % 2),
+            )
+        new = Takahe.create_personal_token(user.identity.pk, user.pk, "n", "write")
+        r = _api(client, "put", new, {"url": "https://hook.example.org/new"})
+        assert r.status_code == 200
+        assert set(user.webhooks.values_list("application_id", flat=True)) == {
+            token.application_id,
+            new.application_id,
+        }
+
+    def test_replacement_allowed_over_cap(self, user, client, token, webhook):
+        # rows beyond the cap can only predate it; replacing must still work
+        for i in range(MAX_WEBHOOKS_PER_USER + 1):
+            Webhook.objects.create(
+                user=user, application_id=100000 + i, url=f"https://h.example/{i}"
+            )
+        r = _api(client, "put", token, {"url": "https://hook.example.org/again"})
+        assert r.status_code == 200
+        webhook.refresh_from_db()
+        assert webhook.url == "https://hook.example.org/again"
+
+    def test_cap_independent_per_user(self, user, client, token, webhook):
+        other = User.register(email="wh3@example.com", username="whuser3")
+        for i in range(MAX_WEBHOOKS_PER_USER):
+            Webhook.objects.create(
+                user=other, application_id=200000 + i, url=f"https://h.example/{i}"
+            )
+        t = Takahe.create_personal_token(user.identity.pk, user.pk, "mine", "write")
+        r = _api(client, "put", t, {"url": "https://hook.example.org/mine"})
+        assert r.status_code == 200
+
+    def test_scope_substring_does_not_count(self, user, client):
+        t = Takahe.create_personal_token(user.identity.pk, user.pk, "t", "write")
+        t.scopes = "read write pushy"
+        t.save(update_fields=["scopes"])
+        r = _api(client, "put", t, {"url": "https://hook.example.org/t"})
+        assert r.status_code == 403
+
+    def test_requires_token(self, client):
+        assert client.get(_WEBHOOK_API).status_code == 401
+        r = client.put(
+            _WEBHOOK_API,
+            data='{"url": "https://x.y/"}',
+            content_type="application/json",
+        )
+        assert r.status_code == 401
+        assert client.delete(_WEBHOOK_API).status_code == 401
+
+    def test_read_only_token_cannot_write(self, user, client):
+        ro = Takahe.create_personal_token(user.identity.pk, user.pk, "ro", "read")
+        r = _api(client, "put", ro, {"url": "https://hook.example.org/ro"})
+        assert r.status_code == 401
+        assert _api(client, "delete", ro).status_code == 401
+
+    def test_token_without_push_cannot_subscribe(self, user, client):
+        # webhooks are push notifications: read and write alone are not enough
+        rw = Takahe.create_personal_token(user.identity.pk, user.pk, "rw", "write")
+        rw.scopes = ["read", "write"]
+        rw.save(update_fields=["scopes"])
+        r = _api(client, "put", rw, {"url": "https://hook.example.org/rw"})
+        assert r.status_code == 403
+        assert r.json()["message"] == "push scope required"
+        assert not Webhook.objects.exists()
+        # legacy string form of the same scopes is treated alike
+        rw.scopes = "read write"
+        rw.save(update_fields=["scopes"])
+        r = _api(client, "put", rw, {"url": "https://hook.example.org/rw"})
+        assert r.status_code == 403
+        rw.scopes = "read write push"
+        rw.save(update_fields=["scopes"])
+        r = _api(client, "put", rw, {"url": "https://hook.example.org/rw"})
+        assert r.status_code == 200
+
+    def test_shared_application_isolated_per_user(self, user, client):
+        other = User.register(email="wh2@example.com", username="whuser2")
+        app = Takahe.get_or_create_app("shared", "", "", 0, client_id="app-shared-x")
+        t1 = Takahe.get_token(Takahe.refresh_token(app, user.identity.pk, user.pk))
+        t2 = Takahe.get_token(Takahe.refresh_token(app, other.identity.pk, other.pk))
+        assert t1 and t2
+        r = _api(client, "put", t1, {"url": "https://hook.example.org/u1"})
+        assert r.status_code == 200
+        assert _api(client, "get", t2).status_code == 404
+        _api(client, "put", t2, {"url": "https://hook.example.org/u2"})
+        assert Webhook.objects.get(user=user).url == "https://hook.example.org/u1"
+        assert Webhook.objects.get(user=other).url == "https://hook.example.org/u2"
+        assert _api(client, "delete", t2).status_code == 200
+        assert Webhook.objects.filter(user=user).exists()
+        clear_webhook_cache(other.pk)
+
+
+@pytest.mark.django_db(databases="__all__")
+class TestWebViews:
+    @pytest.fixture
+    def logged_in(self, client, user):
+        client.force_login(user, backend="mastodon.auth.OAuth2Backend")
+        return client
+
+    @pytest.fixture
+    def dev_token(self, user):
+        app = Takahe.get_or_create_app("", "", "", 0, client_id="app-00000000000-dev")
+        return Takahe.refresh_token(app, user.identity.pk, user.pk)
+
+    def test_console_requires_dev_token(self, user, logged_in, monkeypatch):
+        monkeypatch.setattr("common.views.validate_webhook_url", lambda url: True)
+        r = logged_in.post(
+            reverse("common:developer_webhook"), {"url": "https://hook.example.org/c"}
+        )
+        assert r.status_code == 400
+        assert user.webhooks.count() == 0
+        html = logged_in.get(reverse("common:developer")).content.decode()
+        assert "Generate a token first" in html
+
+    def test_console_sets_and_clears_dev_webhook(
+        self, user, logged_in, dev_token, monkeypatch
+    ):
+        monkeypatch.setattr("common.views.validate_webhook_url", lambda url: True)
+        r = logged_in.post(
+            reverse("common:developer_webhook"), {"url": "https://hook.example.org/c"}
+        )
+        assert r.status_code == 302
+        webhook = user.webhooks.get()
+        assert webhook.url == "https://hook.example.org/c"
+        assert (
+            Takahe.get_or_create_app("", "", "", 0, client_id="app-00000000000-dev").pk
+            == webhook.application_id
+        )
+
+        r = logged_in.get(reverse("common:developer"))
+        assert "https://hook.example.org/c" in r.content.decode()
+
+        r = logged_in.post(reverse("common:developer_webhook"), {"url": ""})
+        assert r.status_code == 302
+        assert user.webhooks.count() == 0
+
+    def test_console_enforces_cap(self, user, logged_in, dev_token, monkeypatch):
+        monkeypatch.setattr("common.views.validate_webhook_url", lambda url: True)
+        for i in range(MAX_WEBHOOKS_PER_USER):
+            t = Takahe.create_personal_token(
+                user.identity.pk, user.pk, f"c{i}", "write"
+            )
+            set_webhook(user, t.application.pk, f"https://h.example/{i}")
+        r = logged_in.post(
+            reverse("common:developer_webhook"), {"url": "https://hook.example.org/c"}
+        )
+        assert r.status_code == 400
+        assert user.webhooks.count() == MAX_WEBHOOKS_PER_USER
+
+    def test_console_ping(
+        self, user, logged_in, token, webhook, queue, django_capture_on_commit_callbacks
+    ):
+        other = Takahe.create_personal_token(user.identity.pk, user.pk, "b", "write")
+        set_webhook(user, other.application.pk, "https://hook.example.org/b")
+        with django_capture_on_commit_callbacks(execute=True):
+            r = logged_in.post(reverse("common:developer_webhook_ping"))
+        assert r.status_code == 302
+        assert r.url.endswith("?pinged=2")
+        assert len(queue.jobs) == 1
+        payload = queue.jobs[0][1][1]
+        assert payload["username"] == user.identity.handle
+        assert payload["changes"] == []
+        html = logged_in.get(r.url).content.decode()
+        assert "Ping queued to 2 webhooks." in html
+
+    def test_console_ping_without_webhooks(
+        self, user, logged_in, queue, django_capture_on_commit_callbacks
+    ):
+        with django_capture_on_commit_callbacks(execute=True):
+            r = logged_in.post(reverse("common:developer_webhook_ping"))
+        assert r.status_code == 302
+        assert r.url.endswith("?pinged=0")
+        assert queue.jobs == []
+
+    def test_console_rejects_invalid_url(self, user, logged_in, dev_token, monkeypatch):
+        monkeypatch.setattr("common.views.validate_webhook_url", lambda url: False)
+        r = logged_in.post(
+            reverse("common:developer_webhook"), {"url": "https://bad.example/"}
+        )
+        assert r.status_code == 400
+        assert user.webhooks.count() == 0
+
+    def test_console_requires_login(self, client):
+        r = client.post(reverse("common:developer_webhook"), {"url": "https://x.y/"})
+        assert r.status_code == 302
+        assert not Webhook.objects.exists()
+
+    def test_account_page_shows_webhook_url(self, user, logged_in, token, webhook):
+        other = Takahe.create_personal_token(user.identity.pk, user.pk, "plain", "read")
+        html = logged_in.get(reverse("users:info")).content.decode()
+        assert f'data-tooltip="{webhook.url}"' in html
+        assert html.count("data-tooltip=") == 1
+        assert other.application.name in html
+
+    def test_account_page_escapes_url(self, user, logged_in, token):
+        set_webhook(user, token.application.pk, 'https://h.example/"><b>x')
+        html = logged_in.get(reverse("users:info")).content.decode()
+        assert '"><b>x' not in html
+        assert "&quot;&gt;&lt;b&gt;x" in html
+
+    def test_account_page_marks_disabled(self, user, logged_in, webhook):
+        webhook.disabled = True
+        webhook.save(update_fields=["disabled"])
+        html = logged_in.get(reverse("users:info")).content.decode()
+        assert f'data-tooltip="{webhook.url}"' in html
+        assert "disabled" in html
+
+    def test_revoke_app_removes_webhook(self, user, logged_in, token, webhook):
+        _bump_failures(webhook.pk)
+        r = logged_in.post(
+            reverse("users:authorized_app_revoke"), {"token_id": token.pk}
+        )
+        assert r.status_code == 302
+        assert not Webhook.objects.filter(pk=webhook.pk).exists()
+        assert has_active_webhook(user.pk) is False
+        assert _bump_failures(webhook.pk) == 1  # counter was cleared
+
+    def test_revoke_keeps_webhook_while_push_token_survives(
+        self, user, logged_in, token, webhook
+    ):
+        second = Token.objects.create(
+            application=token.application,
+            user_id=token.user_id,
+            identity_id=token.identity_id,
+            token="second-" + token.token,
+            scopes=["read", "write", "push"],
+        )
+        logged_in.post(reverse("users:authorized_app_revoke"), {"token_id": token.pk})
+        assert Webhook.objects.filter(pk=webhook.pk).exists()
+        logged_in.post(reverse("users:authorized_app_revoke"), {"token_id": second.pk})
+        assert not Webhook.objects.filter(pk=webhook.pk).exists()
+
+    def test_logout_everywhere_removes_webhooks(self, user, logged_in, webhook):
+        r = logged_in.post(reverse("users:logout_everywhere"))
+        assert r.status_code in (200, 302)
+        assert user.webhooks.count() == 0
+
+    def test_remove_webhook_all(self, user, token, webhook):
+        other = Takahe.create_personal_token(user.identity.pk, user.pk, "b", "read")
+        set_webhook(user, other.application.pk, "https://hook.example.org/b")
+        remove_webhook(user.pk)
+        assert user.webhooks.count() == 0
+
+
+class TestScopeSet:
+    def test_string_and_list_forms(self):
+        assert scope_set("read write push") == {"read", "write", "push"}
+        assert scope_set(["read", "write"]) == {"read", "write"}
+        assert scope_set(None) == set()
+        assert "read" not in scope_set("readonly write")
+
+
+@pytest.mark.django_db(databases="__all__")
+class TestTokenScopeFormat:
+    def test_neodb_minted_tokens_store_lists(self, user):
+        t = Takahe.create_personal_token(user.identity.pk, user.pk, "w", "write")
+        assert t.scopes == ["read", "write", "push"]
+        assert t.application.scopes == "read write push"  # text column
+        t = Takahe.create_personal_token(user.identity.pk, user.pk, "r", "read")
+        assert t.scopes == ["read"]
+        app = Takahe.get_or_create_app("", "", "", 0, client_id="app-00000000000-dev")
+        dev = Takahe.get_token(Takahe.refresh_token(app, user.identity.pk, user.pk))
+        assert dev and dev.scopes == ["read", "write", "push"]
+
+    def test_normalize_legacy_string_scopes(self, user):
+        legacy = Takahe.create_personal_token(user.identity.pk, user.pk, "l", "write")
+        legacy.scopes = "read write push"
+        legacy.save(update_fields=["scopes"])
+        fine = Takahe.create_personal_token(user.identity.pk, user.pk, "f", "read")
+        bad_app = legacy.application
+        bad_app.scopes = "['read', 'write', 'push']"
+        bad_app.save(update_fields=["scopes"])
+        assert normalize_token_scopes_20260907() == 2
+        legacy.refresh_from_db()
+        fine.refresh_from_db()
+        bad_app.refresh_from_db()
+        assert legacy.scopes == ["read", "write", "push"]
+        assert fine.scopes == ["read"]
+        assert bad_app.scopes == "read write push"
+        assert normalize_token_scopes_20260907() == 0
+
+    def test_dev_console_upgraded_without_regenerating(self, user):
+        app = Takahe.get_or_create_app(
+            "Dev Console",
+            "",
+            "",
+            0,
+            scopes="read write follow",
+            client_id="app-00000000000-dev",
+        )
+        dev = Takahe.get_token(Takahe.refresh_token(app, user.identity.pk, user.pk))
+        assert dev
+        dev.scopes = ["read", "write"]
+        dev.save(update_fields=["scopes"])
+        other = Takahe.create_personal_token(user.identity.pk, user.pk, "o", "read")
+        assert normalize_token_scopes_20260907() == 1
+        dev.refresh_from_db()
+        app.refresh_from_db()
+        other.refresh_from_db()
+        assert dev.scopes == ["read", "write", "push"]
+        assert app.scopes == "read write push"
+        assert other.scopes == ["read"]
+        # the upgraded token can now register and receive webhooks
+        assert "push" in scope_set(dev.scopes)
+        assert normalize_token_scopes_20260907() == 0
+
+    def test_account_page_renders_scopes_as_text(self, user, client):
+        t = Takahe.create_personal_token(user.identity.pk, user.pk, "w", "write")
+        legacy = Takahe.create_personal_token(user.identity.pk, user.pk, "l", "read")
+        legacy.scopes = "read"
+        legacy.save(update_fields=["scopes"])
+        client.force_login(user, backend="mastodon.auth.OAuth2Backend")
+        html = client.get(reverse("users:info")).content.decode()
+        assert "<td>read write push</td>" in html
+        assert "<td>read</td>" in html
+        assert "[" not in html.split("Authorized Apps")[1].split("</table>")[0]
+        assert t.pk

@@ -51,6 +51,7 @@ from journal.models.common import VisibilityType
 from takahe.models import InboxMessage
 from takahe.utils import Takahe
 from users.models import Task, User
+from users.models.webhook import has_live_token, remove_webhook
 
 from .account import clear_preference_cache
 
@@ -1278,7 +1279,9 @@ def authorized_app_revoke(request):
     token_pk = request.POST.get("token_id")
     if token_pk:
         identity = request.user.identity
-        Takahe.revoke_token(int(token_pk), identity.pk)
+        application_id = Takahe.revoke_token(int(token_pk), identity.pk)
+        if application_id and not has_live_token(identity.pk, application_id):
+            remove_webhook(request.user.pk, application_id)
         messages.info(request, _("Application access has been revoked."))
     return redirect(reverse("users:info"))
 

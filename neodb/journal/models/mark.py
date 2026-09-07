@@ -444,6 +444,7 @@ class Mark:
         share_to_mastodon: bool,
         application_id: int | None,
         shelf_type: ShelfType,
+        created: bool,
     ):
         # publish a new or updated ActivityPub post
         shelfmember = self.shelfmember
@@ -455,6 +456,7 @@ class Mark:
         else:
             shelfmember.sync_bluesky_records()
         shelfmember.update_index()
+        shelfmember.sync_to_webhooks("create" if created else "update")
         # auto add bookmark
         if (
             post
@@ -560,6 +562,7 @@ class Mark:
         shelfmember.created_time = timestamp
         shelfmember.save(update_fields=["created_time"])
         self.current_progress = current_progress
+        shelfmember.sync_to_webhooks("update")
         return log_entry
 
     def update(
@@ -602,7 +605,13 @@ class Mark:
         self._update_rating(rating_grade, normalized_visibility, last_visibility)
         self._update_log_entry(log_entry)
 
-        self._sync_timeline(update_mode, share_to_mastodon, application_id, shelf_type)
+        self._sync_timeline(
+            update_mode,
+            share_to_mastodon,
+            application_id,
+            shelf_type,
+            created=last_shelf_type is None,
+        )
 
     def delete(self, keep_tags=False):
         self.update(None, tags=None if keep_tags else [])

@@ -78,6 +78,53 @@
         </p>
       </details>
       <br>
+      <details {% if webhook or pinged is not None %}open{% endif %}>
+        <summary>
+          <a>Webhook</a>
+        </summary>
+        <form method="post"
+              action="{% url 'common:developer_webhook' %}"
+              role="group">
+          {% csrf_token %}
+          <input type="url"
+                 name="url"
+                 placeholder="https://example.org/hook"
+                 value="{{ webhook.url | default:'' }}"
+                 {% if not has_token %}disabled{% endif %}>
+          <input type="submit"
+                 {% if has_token %}value="Save"{% elif request.user.is_authenticated %}value="Generate a token first" disabled{% else %}value="Login to set" disabled{% endif %} />
+        </form>
+        <p>
+          {% if webhook.disabled %}
+            This webhook was disabled after repeated delivery failures; save again to re-enable it.
+            <br>
+          {% endif %}
+          When your marks, reviews, notes, collections or articles change, a JSON document with
+          <code>{"version": 1, "username": ..., "changes": [{"type": "mark", "action": "update", "object": {...}}]}</code>
+          is POSTed to this URL; <code>object</code> is the API response for the piece.
+          See <a href="https://neodb.net/api/" target="_blank" rel="noopener">API documentation</a> for the JSON schema.
+          Leave it empty and save to remove it.
+          Each application can set its own webhook for your account via
+          <code>PUT /api/me/webhook</code>; this one belongs to the Dev Console token above.
+        </p>
+        <form method="post"
+              action="{% url 'common:developer_webhook_ping' %}"
+              role="group">
+          {% csrf_token %}
+          <input type="submit"
+                 class="secondary"
+                 value="Ping all webhooks"
+                 {% if not webhook_count %}disabled{% endif %}>
+        </form>
+        <p>
+          {% if pinged is not None %}
+            Ping queued to {{ pinged }} webhook{{ pinged|pluralize }}.
+            <br>
+          {% endif %}
+          Ping sends the same document with an empty <code>changes</code> list to every webhook of your account, from any application, so receivers can be tested.
+        </p>
+      </details>
+      <br>
       <details>
         <summary>
           <a>How to authorize</a>

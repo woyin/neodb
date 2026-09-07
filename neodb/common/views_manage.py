@@ -988,6 +988,11 @@ class AdvancedSettings(SiteConfigSettingsPage):
                 "login; clear to regenerate."
             ),
         },
+        "webhook_timeout": {
+            "title": _("Webhook Timeout (milliseconds)"),
+            "help_text": _("Timeout for delivering webhook requests to applications."),
+            "min_value": 100,
+        },
     }
     layout = {
         _("Domains"): [
@@ -1001,6 +1006,7 @@ class AdvancedSettings(SiteConfigSettingsPage):
             "task_cleanup_days",
             "skip_migrations",
             "atproto_client_jwk",
+            "webhook_timeout",
         ],
     }
 
