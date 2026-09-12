@@ -211,6 +211,29 @@ class HttpSignature:
             raise VerificationFormatError(f"{label} is too far away")
 
     @classmethod
+    def check_digest_coverage(cls, key_id: str, signed_headers: list[str]) -> bool:
+        """
+        Reports whether a verified POST signature covers the Digest header.
+
+        Mastodon and Misskey reject a POST whose signature does not cover Digest,
+        because the body is then unauthenticated. This only logs for now, so we
+        can measure which senders would break before making it a hard failure.
+        Call it only after the signature verified, so forged requests cannot
+        flood the log.
+        """
+        # parse_signature keeps the sender's casing; the signed payload is
+        # built case-insensitively, so compare the same way.
+        if "digest" in (name.lower() for name in signed_headers):
+            return True
+        logger.error(
+            "Inbox: POST signature from %s does not cover Digest (headers=%s)",
+            key_id,
+            " ".join(signed_headers),
+            extra={"keyid": key_id, "signed_headers": signed_headers},
+        )
+        return False
+
+    @classmethod
     def verify_request(cls, request, public_key, skip_date=False):
         """
         Verifies that the request has a valid signature for its body
@@ -261,6 +284,10 @@ class HttpSignature:
             headers_string,
             public_key,
         )
+        if request.method == "POST":
+            cls.check_digest_coverage(
+                signature_details["keyid"], signature_details["headers"]
+            )
 
     @classmethod
     def signed_request(

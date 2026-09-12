@@ -383,12 +383,14 @@ class Inbox(FederatedView):
                             "relay_uri": key_id_actor,
                             "signature": sig_b64,
                             "headers_string": headers_string,
+                            "signed_headers": signature_details["headers"],
                         }
                     else:
                         metadata["http_sig"] = {
                             "actor_uri": document["actor"],
                             "signature": sig_b64,
                             "headers_string": headers_string,
+                            "signed_headers": signature_details["headers"],
                         }
             except VerificationFormatError as e:
                 logger.warning("Inbox error: Bad HTTP signature format: %s", e.args[0])
