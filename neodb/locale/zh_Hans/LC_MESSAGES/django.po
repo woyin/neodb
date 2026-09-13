@@ -1864,13 +1864,12 @@ msgid "Sign in with a Fediverse account, a Bluesky account, or an email address.
 msgstr "可以用联邦宇宙账号、Bluesky 账号或电子邮箱登录。"
 
 #: catalog/templates/discover.html:94
-msgid "In the catalog today"
-msgstr "目前收录"
+msgid "On this server"
+msgstr "本站"
 
-#: catalog/templates/discover.html:105
-#, python-format
-msgid "%(count)s members"
-msgstr "%(count)s 位成员"
+#: catalog/templates/discover.html:99
+msgid "members"
+msgstr "成员"
 
 #: catalog/templates/discover.html:117
 msgid "Welcome. Let us fill your shelf."
@@ -1958,8 +1957,8 @@ msgid "Trending now"
 msgstr "当前热门"
 
 #: catalog/templates/discover.html:193
-msgid "Marked most across the Fediverse in the last few days."
-msgstr "过去几天在联邦宇宙被标记最多的作品。"
+msgid "Marked most across the Fediverse recently."
+msgstr "最近在联邦宇宙被标记最多的作品。"
 
 #: catalog/templates/discover.html:197 catalog/templates/discover.html:256
 #: catalog/templates/discover.html:283 catalog/templates/discover.html:321
@@ -1977,9 +1976,9 @@ msgstr "向右滚动"
 
 #: catalog/templates/discover.html:225
 #, python-format
-msgid "Marked by %(counter)s person this week"
-msgid_plural "Marked by %(counter)s people this week"
-msgstr[0] "本周 %(counter)s 人标记"
+msgid "Marked by %(counter)s person recently"
+msgid_plural "Marked by %(counter)s people recently"
+msgstr[0] "最近 %(counter)s 人标记"
 
 #: catalog/templates/discover.html:252
 msgid "Because of what is on your shelf."
