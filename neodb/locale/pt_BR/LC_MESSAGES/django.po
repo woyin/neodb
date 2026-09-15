@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-09-14 05:42+0800\n"
-"PO-Revision-Date: 2026-09-02 01:51+0000\n"
+"PO-Revision-Date: 2026-09-14 23:57+0000\n"
 "Last-Translator: Havokdan <havokdan@yahoo.com.br>\n"
 "Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/neodb/neodb/pt_BR/>\n"
 "Language: pt_BR\n"
@@ -16,7 +16,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n > 1;\n"
-"X-Generator: Weblate 2026.9.dev0\n"
+"X-Generator: Weblate 2026.10.dev0\n"
 
 #: boofilsic/settings.py:501 common/models/lang.py:232
 msgid "English"
@@ -314,16 +314,12 @@ msgid "Readmoo"
 msgstr "Readmoo"
 
 #: catalog/models/common.py:61
-#, fuzzy
-#| msgid "MyAnimeList Anime"
 msgid "MyAnimeList"
-msgstr "MyAnimeList Anime"
+msgstr "MyAnimeList"
 
 #: catalog/models/common.py:62 catalog/models/common.py:140
-#, fuzzy
-#| msgid "Update"
 msgid "MangaUpdates"
-msgstr "Atualizar"
+msgstr "MangaUpdates"
 
 #: catalog/models/common.py:67
 msgid "ISBN10"
@@ -1095,32 +1091,28 @@ msgid "Item has been marked by users."
 msgstr "O item foi marcado por usuários."
 
 #: catalog/templates/_catalog_edit_preview.html:11
-#, fuzzy
-#| msgid "Confirm and save"
 msgid "Confirm changes"
-msgstr "Confirmar e salvar"
+msgstr "Confirmar alterações"
 
 #: catalog/templates/_catalog_edit_preview.html:16
 msgid "Please correct the errors below."
-msgstr ""
+msgstr "Corrija os erros abaixo."
 
 #: catalog/templates/_catalog_edit_preview.html:24
 msgid "Field"
-msgstr ""
+msgstr "Campo"
 
 #: catalog/templates/_catalog_edit_preview.html:25
 msgid "From"
-msgstr ""
+msgstr "De"
 
 #: catalog/templates/_catalog_edit_preview.html:26
 msgid "To"
-msgstr ""
+msgstr "Para"
 
 #: catalog/templates/_catalog_edit_preview.html:45
-#, fuzzy
-#| msgid "Tag deleted."
 msgid "No changes detected."
-msgstr "Etiqueta excluída."
+msgstr "Nenhuma alteração detectada."
 
 #: catalog/templates/_catalog_edit_preview.html:54
 #: users/templates/users/register.html:104
@@ -1128,10 +1120,8 @@ msgid "Confirm and save"
 msgstr "Confirmar e salvar"
 
 #: catalog/templates/_catalog_edit_preview.html:57
-#, fuzzy
-#| msgid "back to item"
 msgid "Back to editing"
-msgstr "voltar ao item"
+msgstr "Voltar para edição"
 
 #: catalog/templates/_country_list.html:5
 msgid "region"
@@ -1315,10 +1305,8 @@ msgid "Mark history"
 msgstr "histórico de marcações"
 
 #: catalog/templates/_search_suggest.html:2
-#, fuzzy
-#| msgid "Suggest Edits"
 msgid "Suggestions"
-msgstr "Sugerir Edições"
+msgstr "Sugestões"
 
 #: catalog/templates/_sidebar_edit.html:12
 #: catalog/templates/catalog_history.html:10
@@ -1515,14 +1503,12 @@ msgstr "Excluir"
 
 #: catalog/templates/_sidebar_edit.html:275
 #: catalog/templates/_sidebar_edit.html:279
-#, fuzzy
-#| msgid "Tag deleted."
 msgid "Undo delete"
-msgstr "Etiqueta excluída."
+msgstr "Desfazer exclusão"
 
 #: catalog/templates/_sidebar_edit.html:280
 msgid "Links to external sites and parent item were removed on delete and will not be restored."
-msgstr ""
+msgstr "Links para sites externos e item pai foram removidos na exclusão e não serão restaurados."
 
 #: catalog/templates/_sidebar_edit.html:290
 msgid "This edition belongs to the following work"
@@ -1731,14 +1717,12 @@ msgid "album media"
 msgstr "mídia de álbum"
 
 #: catalog/templates/album.html:58
-#, fuzzy
-#| msgid "Track"
 msgid "Tracks"
-msgstr "Faixa"
+msgstr "Faixas"
 
 #: catalog/templates/album.html:62
 msgid "Play this album"
-msgstr ""
+msgstr "Reproduzir este álbum"
 
 #: catalog/templates/catalog_confirm.html:55 common/views_manage.py:139
 msgid "Yes"
@@ -1857,55 +1841,52 @@ msgstr "Anúncios"
 
 #: catalog/templates/discover.html:76
 msgid "Free, open and federated"
-msgstr ""
+msgstr "Gratuito, aberto e federado"
 
 #: catalog/templates/discover.html:77
 msgid "Keep every book, film, album, game and podcast you love on one shelf."
-msgstr ""
+msgstr "Mantenha todos os livros, filmes, álbuns, jogos e podcasts que você adora em uma prateleira."
 
 #: catalog/templates/discover.html:79
 msgid "Mark what you read, watch, play and hear. Rate it, review it, put it in a collection, and share it with friends across the Fediverse and Bluesky."
-msgstr ""
+msgstr "Marque o que você lê, assiste, joga e ouve. Avalie, analise, coloque em uma coleção e compartilhe com amigos no Fediverse e no Bluesky."
 
 #: catalog/templates/discover.html:84 common/templates/common/about.html:35
-#, fuzzy
-#| msgid "Started"
 msgid "Get started"
-msgstr "Iniciado"
+msgstr "Começar"
 
 #: catalog/templates/discover.html:87
-#, fuzzy, python-format
-#| msgid "Your username on %(site_name)s"
+#, python-format
 msgid "About %(site_name)s"
-msgstr "Seu nome de usuário no %(site_name)s"
+msgstr "Sobre %(site_name)s"
 
 #: catalog/templates/discover.html:89 common/templates/common/about.html:42
 msgid "Sign in with a Fediverse account, a Bluesky account, or an email address."
-msgstr ""
+msgstr "Faça login com uma conta Fediverse, uma conta Bluesky ou um endereço de e-mail."
 
 #: catalog/templates/discover.html:94
 msgid "On this server"
-msgstr ""
+msgstr "Neste servidor"
 
 #: catalog/templates/discover.html:99
 msgid "members"
-msgstr ""
+msgstr "membros"
 
 #: catalog/templates/discover.html:117
 msgid "Welcome. Let us fill your shelf."
-msgstr ""
+msgstr "Bem-vindo. Deixe-nos encher sua estante."
 
 #: catalog/templates/discover.html:118
 msgid "Three short steps unlock recommendations and a feed worth reading."
-msgstr ""
+msgstr "Três passos curtos desbloqueiam recomendações e um feed que vale a pena ler."
 
 #: catalog/templates/discover.html:124
 msgid "Mark three things you know"
-msgstr ""
+msgstr "Marque três coisas que você sabe"
 
 #: catalog/templates/discover.html:125
 msgid "Pick from the row below or search for anything. Marks seed your recommendations."
-msgstr ""
+msgstr "Escolha na linha abaixo ou pesquise qualquer coisa. As marcas geram suas recomendações."
 
 #: catalog/templates/discover.html:126 common/templates/common/scan.html:60
 #: common/views_manage.py:766 social/templates/feed_events.html:41
@@ -1914,39 +1895,31 @@ msgstr "Buscar"
 
 #: catalog/templates/discover.html:132
 msgid "Follow a few people"
-msgstr ""
+msgstr "Siga algumas pessoas"
 
 #: catalog/templates/discover.html:133
 msgid "Scroll down to what people are saying and follow the voices you like."
-msgstr ""
+msgstr "Role para baixo até o que as pessoas estão dizendo e siga as vozes que você gosta."
 
 #: catalog/templates/discover.html:134
-#, fuzzy
-#| msgid "New post"
 msgid "See posts"
-msgstr "Nova publicação"
+msgstr "Ver publicações"
 
 #: catalog/templates/discover.html:140
-#, fuzzy
-#| msgid "No history."
 msgid "Bring your history"
-msgstr "sem histórico."
+msgstr "Traga seu histórico"
 
 #: catalog/templates/discover.html:141
 msgid "Import from Douban, Goodreads, Letterboxd, Steam, Trakt or a podcast OPML file."
-msgstr ""
+msgstr "Importe de Douban, Goodreads, Letterboxd, Steam, Trakt ou um arquivo OPML de podcast."
 
 #: catalog/templates/discover.html:142
-#, fuzzy
-#| msgid "Open Library"
 msgid "Open importers"
-msgstr "Open Library"
+msgstr "Abrir importadores"
 
 #: catalog/templates/discover.html:155
-#, fuzzy
-#| msgid "Collections"
 msgid "Sections"
-msgstr "Coleções"
+msgstr "Seções"
 
 #: catalog/templates/discover.html:158 catalog/templates/people_works.html:60
 #: catalog/templates/search_header.html:13
@@ -1961,7 +1934,7 @@ msgstr "todas"
 #: catalog/templates/discover.html:162 catalog/templates/discover.html:246
 #: catalog/templates/discover.html:251 catalog/templates/discover.html:304
 msgid "For you"
-msgstr ""
+msgstr "Para você"
 
 #: catalog/templates/discover.html:174 common/templates/_header.html:65
 #: journal/templates/user_post_list.html:10
@@ -1977,69 +1950,57 @@ msgid "Collections"
 msgstr "Coleções"
 
 #: catalog/templates/discover.html:184
-#, fuzzy
-#| msgid "Original home"
 msgid "Originals"
-msgstr "página inicial original"
+msgstr "Originais"
 
 #: catalog/templates/discover.html:192
-#, fuzzy
-#| msgid "pending"
 msgid "Trending now"
-msgstr "pendente"
+msgstr "Em alta agora"
 
 #: catalog/templates/discover.html:193
 msgid "Marked most across the Fediverse recently."
-msgstr ""
+msgstr "Mais marcado em todo o Fediverso recentemente."
 
 #: catalog/templates/discover.html:197 catalog/templates/discover.html:256
 #: catalog/templates/discover.html:283 catalog/templates/discover.html:321
 #: catalog/templates/discover.html:433 journal/templates/profile.html:74
 #: journal/templates/profile_items.html:20
 msgid "Scroll left"
-msgstr ""
+msgstr "Rolar para a esquerda"
 
 #: catalog/templates/discover.html:203 catalog/templates/discover.html:262
 #: catalog/templates/discover.html:289 catalog/templates/discover.html:327
 #: catalog/templates/discover.html:439 journal/templates/profile.html:80
 #: journal/templates/profile_items.html:26
 msgid "Scroll right"
-msgstr ""
+msgstr "Rolar para a direita"
 
 #: catalog/templates/discover.html:225
-#, fuzzy, python-format
-#| msgid "marked %(counter)s item"
-#| msgid_plural "marked %(counter)s items"
+#, python-format
 msgid "Marked by %(counter)s person recently"
 msgid_plural "Marked by %(counter)s people recently"
-msgstr[0] "marcou %(counter)s item"
-msgstr[1] "marcou %(counter)s itens"
+msgstr[0] "Marcado por %(counter)s pessoa recentemente"
+msgstr[1] "Marcado por %(counter)s pessoas recentemente"
 
 #: catalog/templates/discover.html:252
 msgid "Because of what is on your shelf."
-msgstr ""
+msgstr "Com base no que está na sua prateleira."
 
 #: catalog/templates/discover.html:278
-#, fuzzy
-#| msgid "sure to follow?"
 msgid "From people you follow"
-msgstr "Tem certeza de que deseja seguir?"
+msgstr "De pessoas que você segue"
 
 #: catalog/templates/discover.html:279
-#, fuzzy
-#| msgid "Marks from who you follow"
 msgid "Marked recently by people you follow."
-msgstr "marcações de quem você segue"
+msgstr "Marcado recentemente por pessoas que você segue."
 
 #: catalog/templates/discover.html:305
 msgid "Recommendations appear here once you mark a few things or follow people."
-msgstr ""
+msgstr "As recomendações aparecem aqui assim que você marcar alguns itens ou seguir pessoas."
 
 #: catalog/templates/discover.html:318
-#, fuzzy
-#| msgid "Show all"
 msgid "See all"
-msgstr "mostrar todas"
+msgstr "Ver tudo"
 
 #: catalog/templates/discover.html:343 catalog/templates/discover.html:347
 msgid "Fediverse originals"
@@ -2047,42 +2008,38 @@ msgstr "originais do fediverso"
 
 #: catalog/templates/discover.html:349
 msgid "Podcasts whose creators verified themselves here. Play right on this page."
-msgstr ""
+msgstr "Podcasts cujos criadores se verificaram aqui. Reproduza diretamente nesta página."
 
 #: catalog/templates/discover.html:351
-#, fuzzy
-#| msgid "Verified works"
 msgid "All verified shows"
-msgstr "Obras verificadas"
+msgstr "Todos os programas verificados"
 
 #: catalog/templates/discover.html:368 social/templates/_event_post.html:39
 msgid "Play"
 msgstr "reproduzir"
 
 #: catalog/templates/discover.html:385
-#, fuzzy, python-format
-#| msgid "%(counter)s word"
-#| msgid_plural "%(counter)s words"
+#, python-format
 msgid "%(counter)s recent episode"
 msgid_plural "%(counter)s recent episodes"
-msgstr[0] "%(counter)s palavra"
-msgstr[1] "%(counter)s palavras"
+msgstr[0] "%(counter)s episódio recente"
+msgstr[1] "%(counter)s episódios recentes"
 
 #: catalog/templates/discover.html:404 catalog/templates/discover.html:407
 msgid "What people are saying"
-msgstr ""
+msgstr "O que as pessoas estão dizendo"
 
 #: catalog/templates/discover.html:408
 msgid "Public marks, comments and reviews from around the Fediverse."
-msgstr ""
+msgstr "Marcações, comentários e análises públicas de todo o Fediverso."
 
 #: catalog/templates/discover.html:411
 msgid "Open the feed"
-msgstr ""
+msgstr "Abrir o feed"
 
 #: catalog/templates/discover.html:429
 msgid "Lists made by members, most recently updated first."
-msgstr ""
+msgstr "Listas criadas por membros, ordenadas pelas mais recentemente atualizadas primeiro."
 
 #: catalog/templates/discover.html:454 catalog/templates/discover.html:456
 #: common/templates/_sidebar_anonymous.html:54
@@ -2090,26 +2047,22 @@ msgid "Popular tags"
 msgstr "Etiquetas Populares"
 
 #: catalog/templates/discover.html:457
-#, fuzzy
-#| msgid "Show popular public tags on the discover page."
 msgid "Most used public tags in the last two weeks."
-msgstr "Mostrar etiquetas públicas populares na página de descoberta."
+msgstr "Etiquetas públicas mais usadas nas últimas duas semanas."
 
 #: catalog/templates/discover_category.html:10
 #: catalog/templates/discover_category.html:19
 #, python-format
 msgid "Trending in %(category)s"
-msgstr ""
+msgstr "Em alta em %(category)s"
 
 #: catalog/templates/discover_category.html:20
 msgid "Most marked across the Fediverse recently. Refreshed every hour."
-msgstr ""
+msgstr "Mais marcado em todo o Fediverso recentemente. Atualizado a cada hora."
 
 #: catalog/templates/discover_category.html:21
-#, fuzzy
-#| msgid "Back to item"
 msgid "Back to Explore"
-msgstr "voltar ao item"
+msgstr "Voltar para Explorar"
 
 #: catalog/templates/discover_category.html:27
 #: catalog/templates/discover_original_podcasts.html:25
@@ -2169,18 +2122,16 @@ msgstr "Resultados da pesquisa"
 
 #: catalog/templates/fetch_confirm.html:21
 msgid "This link is not in the catalog yet."
-msgstr ""
+msgstr "Este link ainda não está no catálogo."
 
 #: catalog/templates/fetch_confirm.html:26
 #, python-format
 msgid "Get the data from %(site_label)s and add it to the catalog?"
-msgstr ""
+msgstr "Obter os dados de %(site_label)s e adicionar ao catálogo?"
 
 #: catalog/templates/fetch_confirm.html:31
-#, fuzzy
-#| msgid "Fetch all"
 msgid "Fetch"
-msgstr "Buscar tudo"
+msgstr "Buscar"
 
 #: catalog/templates/fetch_pending.html:22
 #, python-format
@@ -2437,10 +2388,8 @@ msgstr "Tem certeza de que deseja excluir?"
 
 #: catalog/views/edit.py:323 catalog/views/edit.py:518
 #: catalog/views/edit.py:617
-#, fuzzy
-#| msgid "This operation cannot be undone. Sure to merge?"
 msgid "This operation cannot be undone."
-msgstr "Esta operação não pode ser desfeita. Tem certeza de que deseja mesclar?"
+msgstr "Esta operação não pode ser desfeita."
 
 #: catalog/views/edit.py:344 catalog/views/edit.py:437
 #: catalog/views/edit.py:603 catalog/views/edit.py:705
@@ -2463,56 +2412,40 @@ msgid "Insufficient permission"
 msgstr "Permissão insuficiente"
 
 #: catalog/views/edit.py:346
-#, fuzzy
-#| msgid "Item has been deleted."
 msgid "Item is not deleted"
-msgstr "O item foi excluído."
+msgstr "O item não foi excluído"
 
 #: catalog/views/edit.py:389
-#, fuzzy
-#| msgid "Switching may remove some metadata. Sure to proceed?"
 msgid "Switching may remove some metadata."
-msgstr "Alternar pode remover alguns metadados. Tem certeza de que deseja continuar?"
+msgstr "A troca pode remover alguns metadados."
 
 #: catalog/views/edit.py:395
-#, fuzzy
-#| msgid "The following items are merged into this item"
 msgid "The following seasons will be detached from this show"
-msgstr "Os seguintes itens estão mesclados neste item"
+msgstr "As seguintes temporadas serão desvinculadas desta série"
 
 #: catalog/views/edit.py:400
-#, fuzzy
-#| msgid "Alias to {handle} removed."
 msgid "Links to IMDB and TMDB will be removed."
-msgstr "Alias para {handle} removido."
+msgstr "Os links para o IMDB e o TMDB serão removidos."
 
 #: catalog/views/edit.py:403
-#, fuzzy
-#| msgid "Are you sure to merge?"
 msgid "Are you sure to switch category?"
-msgstr "Tem certeza de que deseja mesclar?"
+msgstr "Tem certeza de que deseja trocar a categoria?"
 
 #: catalog/views/edit.py:451
-#, fuzzy
-#| msgid "Are you sure to delete this post?"
 msgid "Are you sure to remove the link to this site?"
-msgstr "Tem certeza de que deseja excluir esta publicação?"
+msgstr "Tem certeza de que deseja remover o link para este site?"
 
 #: catalog/views/edit.py:457
-#, fuzzy
-#| msgid "You may not be able to undo this operation, sure to remove?"
 msgid "You may not be able to undo this operation."
-msgstr "Você pode não conseguir desfazer esta operação. Tem certeza de que deseja remover?"
+msgstr "Você pode não conseguir desfazer esta operação."
 
 #: catalog/views/edit.py:483
-#, fuzzy
-#| msgid "Link to parent item"
 msgid "Current parent item"
-msgstr "Vincular ao item pai"
+msgstr "Item pai atual"
 
 #: catalog/views/edit.py:487
 msgid "The link to the parent item will be removed."
-msgstr ""
+msgstr "O link para o item pai será removido."
 
 #: catalog/views/edit.py:490 catalog/views/edit.py:680
 msgid "Are you sure to link?"
@@ -2520,11 +2453,11 @@ msgstr "Tem certeza de que deseja vincular?"
 
 #: catalog/views/edit.py:521
 msgid "The following seasons will be deleted"
-msgstr ""
+msgstr "As seguintes temporadas serão excluídas"
 
 #: catalog/views/edit.py:525
 msgid "The following seasons will be kept"
-msgstr ""
+msgstr "As seguintes temporadas serão mantidas"
 
 #: catalog/views/edit.py:550
 msgid "TV season with IMDB id and season number required."
@@ -2575,16 +2508,12 @@ msgid "Cannot link items other than editions"
 msgstr "Não é possível vincular itens que não sejam edições"
 
 #: catalog/views/edit.py:710
-#, fuzzy
-#| msgid "Are you sure to link?"
 msgid "Are you sure to unlink?"
-msgstr "Tem certeza de que deseja vincular?"
+msgstr "Tem certeza de que deseja desvincular?"
 
 #: catalog/views/edit.py:715
-#, fuzzy
-#| msgid "This edition belongs to the following work"
 msgid "This edition will be unlinked from the following work"
-msgstr "Esta edição pertence à seguinte obra"
+msgstr "Esta edição será desvinculada da seguinte obra"
 
 #: catalog/views/search.py:113 catalog/views/search.py:205
 msgid "the internet"
@@ -2645,10 +2574,8 @@ msgid "Invalid role"
 msgstr "Função inválida"
 
 #: catalog/views/view.py:828
-#, fuzzy
-#| msgid "Tag not found"
 msgid "Category not found"
-msgstr "Etiqueta não encontrada"
+msgstr "Categoria não encontrada"
 
 #: common/models/game_platform.py:30
 msgctxt "platform"
@@ -4058,14 +3985,12 @@ msgid "About"
 msgstr "Sobre"
 
 #: common/templates/_footer.html:9
-#, fuzzy
-#| msgid "APR"
 msgid "API"
-msgstr "ABR"
+msgstr "API"
 
 #: common/templates/_footer.html:10
 msgid "Apps"
-msgstr ""
+msgstr "Apps"
 
 #: common/templates/_footer.html:13 users/templates/users/login.html:259
 #, python-format
@@ -4155,26 +4080,20 @@ msgid "Edit layout"
 msgstr "editar layout"
 
 #: common/templates/_layout_editor.html:24
-#, fuzzy
-#| msgid "Edit layout"
 msgid "Page layout"
-msgstr "editar layout"
+msgstr "Layout da página"
 
 #: common/templates/_layout_editor.html:26
 msgid "Switch sections on or off and move them up or down. The order applies on every device."
-msgstr ""
+msgstr "Ative ou desative seções e mova-as para cima ou para baixo. A ordem se aplica em todos os dispositivos."
 
 #: common/templates/_layout_editor.html:47
-#, fuzzy
-#| msgid "Move to top"
 msgid "Move up"
-msgstr "Mover para o topo"
+msgstr "Mover para cima"
 
 #: common/templates/_layout_editor.html:53
-#, fuzzy
-#| msgid "Move to top"
 msgid "Move down"
-msgstr "Mover para o topo"
+msgstr "Mover para baixo"
 
 #: common/templates/_sidebar.html:61
 #: users/templates/users/profile_actions.html:36
@@ -4295,10 +4214,8 @@ msgid "Statistics are being calculated. Please check back in a few minutes."
 msgstr "As estatísticas estão sendo calculadas. Volte a verificar em alguns minutos."
 
 #: common/templates/common/about.html:77
-#, fuzzy
-#| msgid "This season"
 msgid "This instance"
-msgstr "esta temporada"
+msgstr "Esta instância"
 
 #: common/templates/common/about.html:80
 msgid "Instance domain"
@@ -4334,11 +4251,11 @@ msgstr "Não Especificado"
 
 #: common/templates/common/about.html:110
 msgid "Team"
-msgstr ""
+msgstr "Equipe"
 
 #: common/templates/common/about.html:111
 msgid "The people who run this instance and keep the catalog tidy."
-msgstr ""
+msgstr "As pessoas que administram esta instância e mantêm o catálogo organizado."
 
 #: common/templates/common/about.html:116
 msgid "Site administrators"
@@ -4354,29 +4271,27 @@ msgstr "Instâncias Conhecidas do NeoDB"
 
 #: common/templates/common/about.html:161
 msgid "Other communities running the same software. Follow people there from here."
-msgstr ""
+msgstr "Outras comunidades que executam o mesmo software. Siga pessoas de lá a partir daqui."
 
 #: common/templates/common/about.html:174
-#, fuzzy
-#| msgid "Other editions"
 msgid "Attributions"
-msgstr "outras edições"
+msgstr "Atribuições"
 
 #: common/templates/common/about.html:178
 msgid "This website is powered by <a href=\"https://neodb.net\" target=\"_blank\">NeoDB</a>, a free and open-source software licensed under the AGPL-v3. All modifications to the software must be made available under the same license."
-msgstr ""
+msgstr "Este site é desenvolvido com <a href=\"https://neodb.net\" target=\"_blank\">NeoDB</a>, um software livre e de código aberto licenciado sob a AGPL-v3. Todas as modificações do software devem ser disponibilizadas sob a mesma licença."
 
 #: common/templates/common/about.html:181
 msgid "This website uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB."
-msgstr ""
+msgstr "Este site utiliza o TMDB e as APIs do TMDB, mas não é endossado, certificado ou aprovado pelo TMDB."
 
 #: common/templates/common/about.html:184
 msgid "This website uses Discogs' API but is not affiliated with, sponsored or endorsed by Discogs. 'Discogs' is a trademark of Zink Media, LLC."
-msgstr ""
+msgstr "Este site utiliza a API do Discogs, mas não é afiliado, patrocinado ou endossado pelo Discogs. 'Discogs' é uma marca registrada da Zink Media, LLC."
 
 #: common/templates/common/about.html:187
 msgid "This website may get catalog data from the sources below. These sources are not affiliated with this website."
-msgstr ""
+msgstr "Este site pode obter dados de catálogo a partir das fontes abaixo. Essas fontes não são afiliadas a este site."
 
 #: common/templates/common/error.html:12 journal/models/crosspost.py:13
 msgid "Error"
@@ -4436,15 +4351,15 @@ msgstr "Administração do Banco de Dados"
 
 #: common/templates/manage/environment.html:6
 msgid "These settings come from environment variables and cannot be changed here. Edit .env and restart the server to change them. Passwords and keys are hidden."
-msgstr ""
+msgstr "Essas configurações vêm de variáveis de ambiente e não podem ser alteradas aqui. Edite o .env e reinicie o servidor para alterá-las. Senhas e chaves ficam ocultas."
 
 #: common/templates/manage/environment.html:23
 msgid "(empty)"
-msgstr ""
+msgstr "(vazio)"
 
 #: common/templates/manage/environment.html:26
 msgid "Default"
-msgstr ""
+msgstr "Padrão"
 
 #: common/templatetags/duration.py:59
 msgid "just now"
@@ -4519,7 +4434,7 @@ msgstr "Avançado"
 
 #: common/views_manage.py:44
 msgid "Environment"
-msgstr ""
+msgstr "Ambiente"
 
 #: common/views_manage.py:280
 msgid "Invalid value."
@@ -4658,30 +4573,24 @@ msgid "Show a shelf of recent episodes from podcasts with a verified creator on 
 msgstr "Mostrar uma prateleira com episódios recentes de podcasts com criador verificado na página de descoberta."
 
 #: common/views_manage.py:447
-#, fuzzy
-#| msgid "your timeline"
 msgid "Show world timeline"
-msgstr "sua linha do tempo"
+msgstr "Mostrar linha do tempo mundial"
 
 #: common/views_manage.py:449
 msgid "Offer a tab with public posts from this site and every server it federates with."
-msgstr ""
+msgstr "Oferecer uma aba com publicações públicas deste site e de todos os servidores com os quais ele se federa."
 
 #: common/views_manage.py:454
-#, fuzzy
-#| msgid "Show Local Only"
 msgid "Show local timeline"
-msgstr "Mostrar Apenas Local"
+msgstr "Mostrar linha do tempo local"
 
 #: common/views_manage.py:455
 msgid "Offer a tab with public posts from this site only."
-msgstr ""
+msgstr "Oferecer uma aba com publicações públicas apenas deste site."
 
 #: common/views_manage.py:459
-#, fuzzy
-#| msgid "your timeline"
 msgid "Timelines"
-msgstr "sua linha do tempo"
+msgstr "Linhas do Tempo"
 
 #: common/views_manage.py:487
 msgid "Enable recommendations"
@@ -4805,11 +4714,11 @@ msgstr "Um domínio por linha. Deixe em branco para permitir qualquer instância
 
 #: common/views_manage.py:609
 msgid "Email domain blocklist"
-msgstr ""
+msgstr "Lista de bloqueio de domínios de e-mail"
 
 #: common/views_manage.py:611
 msgid "One domain per line. A new account or a new email link is refused when the address is on one of these domains or on a subdomain of one. Addresses that are already linked keep working."
-msgstr ""
+msgstr "Um domínio por linha. Uma nova conta ou um novo vínculo de e-mail é recusado quando o endereço está em um desses domínios ou em um subdomínio de um deles. Endereços já vinculados continuam funcionando."
 
 #: common/views_manage.py:618
 msgid "Registration captcha items"
@@ -4857,21 +4766,19 @@ msgstr "Nome e endereço do remetente para e-mails enviados."
 
 #: common/views_manage.py:658
 msgid "Enable Twitter / X archive import"
-msgstr ""
+msgstr "Ativar importação de arquivo do Twitter / X"
 
 #: common/views_manage.py:660
 msgid "Show the Twitter / X archive import on the data page. Imported tweets become local posts that are never federated."
-msgstr ""
+msgstr "Mostrar a importação de arquivo do Twitter / X na página de dados. Os tweets importados se tornam publicações locais que nunca são federadas."
 
 #: common/views_manage.py:665
-#, fuzzy
-#| msgid "Enable Mastodon Login"
 msgid "Enable Mastodon archive import"
-msgstr "Ativar Login via Mastodon"
+msgstr "Ativar importação de arquivo do Mastodon"
 
 #: common/views_manage.py:667
 msgid "Show the Mastodon archive import on the data page. Imported posts become local posts that are never federated."
-msgstr ""
+msgstr "Mostrar a importação de arquivo do Mastodon na página de dados. As publicações importadas se tornam publicações locais que nunca são federadas."
 
 #: common/views_manage.py:672
 msgid "Default language"
@@ -4900,10 +4807,8 @@ msgid "Email"
 msgstr "Email"
 
 #: common/views_manage.py:705
-#, fuzzy
-#| msgid "Import"
 msgid "Data import"
-msgstr "Importar"
+msgstr "Importação de dados"
 
 #: common/views_manage.py:709
 msgid "Localization"
@@ -4959,11 +4864,11 @@ msgstr "Valores de categoria a ocultar do catálogo, um por linha."
 
 #: common/views_manage.py:751
 msgid "Guest search page limit"
-msgstr ""
+msgstr "Limite da página de busca para visitantes"
 
 #: common/views_manage.py:753
 msgid "Visitors who are not logged in cannot open search result pages beyond this one. Lower it to keep crawlers out of deep pagination, which is expensive to serve."
-msgstr ""
+msgstr "Visitantes que não estão logados não podem abrir páginas de resultados de busca além desta. Diminua o valor para impedir que crawlers acessem páginas profundas, o que é custoso de processar."
 
 #: common/views_manage.py:779
 msgid "Spotify API key"
@@ -5018,14 +4923,12 @@ msgid "Bearer token from https://boardgamegeek.com/applications (see https://boa
 msgstr "Token de portador (bearer token) obtido em https://boardgamegeek.com/applications (consulte https://boardgamegeek.com/using_the_xml_api#toc9)."
 
 #: common/views_manage.py:811
-#, fuzzy
-#| msgid "MyAnimeList Anime"
 msgid "MyAnimeList client ID"
-msgstr "MyAnimeList Anime"
+msgstr "ID de cliente do MyAnimeList"
 
 #: common/views_manage.py:813
 msgid "Client ID of an app registered at https://myanimelist.net/apiconfig. MyAnimeList is disabled when empty."
-msgstr ""
+msgstr "ID de cliente de um aplicativo registrado em https://myanimelist.net/apiconfig. O MyAnimeList fica desativado quando vazio."
 
 #: common/views_manage.py:818 users/templates/users/steam_import.html:26
 msgid "Steam API key"
@@ -5222,14 +5125,12 @@ msgid "Private key (JWK) identifying this site to ATProto authorization servers.
 msgstr "Chave privada (JWK) que identifica este site aos servidores de autorização ATProto. Gerada automaticamente no primeiro login via Bluesky; apague para gerar novamente."
 
 #: common/views_manage.py:1010
-#, fuzzy
-#| msgid "Cache Timeout (seconds)"
 msgid "Webhook timeout (milliseconds)"
-msgstr "Tempo Limite de Cache (segundos)"
+msgstr "Tempo limite de webhook (milissegundos)"
 
 #: common/views_manage.py:1011
 msgid "Timeout for delivering webhook requests to applications."
-msgstr ""
+msgstr "Tempo limite para envio de solicitações de webhook aos aplicativos."
 
 #: common/views_manage.py:1016
 msgid "Domains"
@@ -5292,36 +5193,32 @@ msgid "Genres by category"
 msgstr "Gêneros por Categoria"
 
 #: common/views_manage.py:1103
-#, fuzzy
-#| msgid "Site Name"
 msgid "Site"
-msgstr "Nome do Site"
+msgstr "Site"
 
 #: common/views_manage.py:1113
-#, fuzzy
-#| msgid "Database Admin"
 msgid "Database and services"
-msgstr "Administração do Banco de Dados"
+msgstr "Banco de dados e serviços"
 
 #: common/views_manage.py:1123
 msgid "Media and files"
-msgstr ""
+msgstr "Mídia e arquivos"
 
 #: common/views_manage.py:1132
 msgid "Monitoring"
-msgstr ""
+msgstr "Monitoramento"
 
 #: common/views_manage.py:1136
 msgid "Security"
-msgstr ""
+msgstr "Segurança"
 
 #: common/views_manage.py:1145
 msgid "Other environment variables"
-msgstr ""
+msgstr "Outras variáveis de ambiente"
 
 #: common/views_manage.py:1147
 msgid "Present in the environment of this process but not read by NeoDB settings. They are used by Docker Compose or by Takahe."
-msgstr ""
+msgstr "Presentes no ambiente deste processo, mas não lidas pelas configurações do NeoDB. São usadas pelo Docker Compose ou pelo Takahe."
 
 #: journal/forms.py:12
 msgid "Tips: use >!text!< for spoilers; some instances may not be able to show posts longer than 360 charactors."
@@ -6119,13 +6016,11 @@ msgid "removed mark"
 msgstr "marcação removida"
 
 #: journal/templates/_collection_card.html:30
-#, fuzzy, python-format
-#| msgid "%(count)d item"
-#| msgid_plural "%(count)d items"
+#, python-format
 msgid "%(counter)s item"
 msgid_plural "%(counter)s items"
-msgstr[0] "%(count)d item"
-msgstr[1] "%(count)d itens"
+msgstr[0] "%(counter)s item"
+msgstr[1] "%(counter)s itens"
 
 #: journal/templates/_feature_stats.html:10
 msgid "Stop tracking"
@@ -6647,10 +6542,8 @@ msgid "Organizations"
 msgstr "Organizações"
 
 #: journal/templates/profile_items.html:14
-#, fuzzy
-#| msgid "created a collection"
 msgid "Create collection"
-msgstr "criou uma coleção"
+msgstr "Criar coleção"
 
 #: journal/templates/replies.html:8
 msgid "Replies"
@@ -6681,52 +6574,44 @@ msgid "Delete this tag"
 msgstr "Excluir esta etiqueta"
 
 #: journal/templates/user_article_list.html:26
-#, fuzzy, python-format
-#| msgid "%(counter)s word"
-#| msgid_plural "%(counter)s words"
+#, python-format
 msgid "%(counter)s article"
 msgid_plural "%(counter)s articles"
-msgstr[0] "%(counter)s palavra"
-msgstr[1] "%(counter)s palavras"
+msgstr[0] "%(counter)s artigo"
+msgstr[1] "%(counter)s artigos"
 
 #: journal/templates/user_article_list.html:31
 #, python-format
 msgid "by %(name)s"
-msgstr ""
+msgstr "por %(name)s"
 
 #: journal/templates/user_article_list.html:39
-#, fuzzy
-#| msgid "RSS Feed URL"
 msgid "RSS feed"
-msgstr "URL do Feed RSS"
+msgstr "Feed RSS"
 
 #: journal/templates/user_article_list.html:46
 msgid "Compose new article"
 msgstr "Escrever novo artigo"
 
 #: journal/templates/user_article_list.html:74
-#, fuzzy, python-format
-#| msgid "%(counter)s word"
-#| msgid_plural "%(counter)s words"
+#, python-format
 msgid "%(counter)s min read"
 msgid_plural "%(counter)s min read"
-msgstr[0] "%(counter)s palavra"
-msgstr[1] "%(counter)s palavras"
+msgstr[0] "%(counter)s min de leitura"
+msgstr[1] "%(counter)s min de leituras"
 
 #: journal/templates/user_article_list.html:112
 msgid "You have no articles yet. An article is a long text that you write here and send to the Fediverse."
-msgstr ""
+msgstr "Você ainda não tem artigos. Um artigo é um texto longo que você escreve aqui e envia para o Fediverso."
 
 #: journal/templates/user_article_list.html:118
-#, fuzzy
-#| msgid "wrote an article"
 msgid "Write an article"
-msgstr "escreveu um artigo"
+msgstr "Escrever um artigo"
 
 #: journal/templates/user_article_list.html:123
 #, python-format
 msgid "%(name)s has no articles yet."
-msgstr ""
+msgstr "%(name)s ainda não tem artigos."
 
 #: journal/templates/user_collection_list.html:16
 #: journal/templates/user_collection_list.html:30
@@ -6789,14 +6674,12 @@ msgid "Collection by {0}"
 msgstr "Coleção de {0}"
 
 #: journal/views/collection.py:400
-#, fuzzy
-#| msgid "Data saved but unable to crosspost to Fediverse instance."
 msgid "Unable to crosspost to Fediverse instance."
-msgstr "Dados salvos, mas não foi possível publicar de forma cruzada na instância do Fediverso."
+msgstr "Não foi possível fazer publicação cruzada para a instância do Fediverso."
 
 #: journal/views/collection.py:411
 msgid "Unable to share to Bluesky."
-msgstr ""
+msgstr "Não foi possível compartilhar no Bluesky."
 
 #: journal/views/collection.py:423
 msgid "shared my collection"
@@ -7149,11 +7032,11 @@ msgstr "Endereço de e-mail inválido"
 
 #: mastodon/views/email.py:46
 msgid "Unable to register with this email address"
-msgstr ""
+msgstr "Não foi possível registrar com este endereço de e-mail"
 
 #: mastodon/views/email.py:47
 msgid "Please use a different email address."
-msgstr ""
+msgstr "Use um endereço de e-mail diferente."
 
 #: mastodon/views/email.py:54
 msgid "Verification"
@@ -7228,10 +7111,8 @@ msgid "New post"
 msgstr "Nova publicação"
 
 #: social/templates/_compose_menu.html:20
-#, fuzzy
-#| msgid "wrote a note"
 msgid "Share a short note"
-msgstr "escreveu uma nota"
+msgstr "Compartilhar uma anotação curta"
 
 #: social/templates/_compose_menu.html:30
 msgid "New article"
@@ -7239,7 +7120,7 @@ msgstr "Novo artigo"
 
 #: social/templates/_compose_menu.html:31
 msgid "Write a longer piece with a title"
-msgstr ""
+msgstr "Escreva um texto mais longo com um título"
 
 #: social/templates/_event_mark_group.html:27
 #, python-format
@@ -7484,38 +7365,28 @@ msgid "Activities"
 msgstr "Atividades"
 
 #: social/templates/feed.html:39
-#, fuzzy
-#| msgid "Feed"
 msgid "Feeds"
-msgstr "Feed"
+msgstr "Feeds"
 
 #: social/templates/feed.html:50 social/templates/feed.html:52
-#, fuzzy
-#| msgid "Write a review"
 msgid "Marks and reviews"
-msgstr "escrever uma análise"
+msgstr "Marcações e análises"
 
 #: social/templates/feed.html:58 social/templates/feed.html:60
-#, fuzzy
-#| msgid "locale"
 msgid "Local"
-msgstr "localidade"
+msgstr "Local"
 
 #: social/templates/feed.html:67 social/templates/feed.html:69
-#, fuzzy
-#| msgid "WorldCat"
 msgid "World"
-msgstr "WorldCat"
+msgstr "Mundo"
 
 #: social/templates/feed_events.html:28
 msgid "No matching activities."
 msgstr "nenhuma atividade correspondente."
 
 #: social/templates/feed_events.html:30
-#, fuzzy
-#| msgid "no matching activities."
 msgid "No public activities yet."
-msgstr "nenhuma atividade correspondente."
+msgstr "Ainda não há atividades públicas."
 
 #: social/templates/feed_events.html:35
 #, python-format
@@ -7533,23 +7404,17 @@ msgid "Import"
 msgstr "Importar"
 
 #: social/templates/notification.html:26
-#, fuzzy, python-format
-#| msgid "%(counter)s word"
-#| msgid_plural "%(counter)s words"
+#, python-format
 msgid "%(count)s unread"
-msgstr "%(counter)s palavra"
+msgstr "%(count)s não lida"
 
 #: social/templates/notification.html:57 social/templates/notification.html:59
-#, fuzzy
-#| msgid "mention"
 msgid "Mentions"
-msgstr "mencionar"
+msgstr "Menções"
 
 #: social/templates/notification.html:64 social/templates/notification.html:66
-#, fuzzy
-#| msgid "Followers"
 msgid "Follows"
-msgstr "Seguidores"
+msgstr "Seguidas"
 
 #: social/templates/post_question.html:6
 msgid "Poll options"
@@ -7590,16 +7455,12 @@ msgid "Poll"
 msgstr "Enquete"
 
 #: social/views.py:61
-#, fuzzy
-#| msgid "Activities from those you follow"
 msgid "Activities on this site"
-msgstr "Atividades de quem você segue"
+msgstr "Atividades neste site"
 
 #: social/views.py:62
-#, fuzzy
-#| msgid "Activities from those you follow"
 msgid "Activities from the fediverse"
-msgstr "Atividades de quem você segue"
+msgstr "Atividades do fediverso"
 
 #: takahe/models.py:445
 msgid "Display Name"
@@ -8058,20 +7919,16 @@ msgid "Scopes"
 msgstr "Escopos"
 
 #: users/templates/users/account.html:386
-#, fuzzy
-#| msgid "Discord Webhooks"
 msgid "Webhook"
-msgstr "Webhooks do Discord"
+msgstr "Webhook"
 
 #: users/templates/users/account.html:400
 msgid "Disabled"
-msgstr ""
+msgstr "Desativado"
 
 #: users/templates/users/account.html:402
-#, fuzzy
-#| msgid "Activities"
 msgid "Active"
-msgstr "Atividades"
+msgstr "Ativo"
 
 #: users/templates/users/account.html:410
 msgid "Revoke access for this application?"
@@ -8200,10 +8057,8 @@ msgstr "Acesso completo"
 
 #: users/templates/users/authorized_app_create.html:48
 #: users/templates/users/authorized_app_created.html:39
-#, fuzzy
-#| msgid "Migrate Account"
 msgid "Back to Account"
-msgstr "Migrar Conta"
+msgstr "Voltar para Conta"
 
 #: users/templates/users/authorized_app_created.html:9
 #: users/templates/users/authorized_app_created.html:19
@@ -8488,40 +8343,36 @@ msgid "Only published posts use the visibility below. Drafts, pending, private a
 msgstr "Apenas publicações publicadas usam a visibilidade abaixo. Rascunhos, pendentes, privados e publicações protegidas por senha são sempre importados como somente mencionados, portanto nada não publicado se torna público."
 
 #: users/templates/users/data.html:561
-#, fuzzy
-#| msgid "Import NeoDB Archive"
 msgid "Import Twitter / X archive"
-msgstr "Importar Arquivo do NeoDB"
+msgstr "Importar arquivo do Twitter / X"
 
 #: users/templates/users/data.html:567
 msgid "On X, go to <b>Settings</b> - <b>Your account</b> - <b>Download an archive of your data</b>. Upload the <code>.zip</code> you receive, or only the <code>data/tweets.js</code> file inside it if the archive is larger than 100 MB (photos are then not imported)."
-msgstr ""
+msgstr "No X, acesse <b>Configurações</b> - <b>Sua conta</b> - <b>Baixar um arquivo com seus dados</b>. Envie o arquivo <code>.zip</code> recebido, ou apenas o arquivo <code>data/tweets.js</code> contido nele, caso o arquivo seja maior que 100 MB (nesse caso, as fotos não serão importadas)."
 
 #: users/templates/users/data.html:570
 msgid "Each tweet becomes a post with its original date, text, links and photos. Replies to your own tweets are kept as a thread. A retweet becomes a short post that links to the original tweet. Videos are skipped."
-msgstr ""
+msgstr "Cada tweet se torna uma publicação com sua data, texto, links e fotos originais. Respostas aos seus próprios tweets são mantidas como uma sequência (thread). Um retweet se torna uma publicação curta que aponta para o tweet original. Vídeos são ignorados."
 
 #: users/templates/users/data.html:573
 msgid "Imported posts are only visible on this site and are never sent to other servers or to followers. Tweets that were imported before are skipped, so the same archive can be uploaded again."
-msgstr ""
+msgstr "As publicações importadas ficam visíveis apenas neste site e nunca são enviadas a outros servidores ou seguidores. Tweets já importados anteriormente são ignorados, então o mesmo arquivo pode ser enviado novamente sem problemas."
 
 #: users/templates/users/data.html:615
-#, fuzzy
-#| msgid "Import NeoDB Archive"
 msgid "Import Mastodon archive"
-msgstr "Importar Arquivo do NeoDB"
+msgstr "Importar arquivo do Mastodon"
 
 #: users/templates/users/data.html:621
 msgid "On your Mastodon server, go to <b>Preferences</b> - <b>Import and export</b> - <b>Request your archive</b>. Upload the <code>.zip</code> you receive, or only the <code>outbox.json</code> file inside it if the archive is larger than 100 MB (photos are then not imported)."
-msgstr ""
+msgstr "No seu servidor Mastodon, acesse <b>Preferências</b> - <b>Importar e exportar</b> - <b>Solicitar seu arquivo</b>. Envie o arquivo <code>.zip</code> recebido, ou apenas o arquivo <code>outbox.json</code> contido nele, caso o arquivo seja maior que 100 MB (nesse caso, as fotos não serão importadas)."
 
 #: users/templates/users/data.html:624
 msgid "Each post is imported with its original date, text, links, photos, content warning and visibility, so a followers-only post or a direct message stays that way. Replies to your own posts are kept as a thread. A boost becomes a short post that links to the original post. Videos, favourites and bookmarks are skipped."
-msgstr ""
+msgstr "Cada publicação é importada com sua data, texto, links, fotos, aviso de conteúdo e visibilidade originais, de modo que uma publicação restrita a seguidores ou uma mensagem direta permanece assim. Respostas às suas próprias publicações são mantidas como uma sequência (thread). Um impulso se torna uma publicação curta que aponta para a publicação original. Vídeos, favoritos e marcadores são ignorados."
 
 #: users/templates/users/data.html:627
 msgid "Imported posts are only visible on this site and are never sent to other servers or to followers. Posts that were imported before are skipped, so the same archive can be uploaded again."
-msgstr ""
+msgstr "As publicações importadas ficam visíveis apenas neste site e nunca são enviadas a outros servidores ou seguidores. Publicações já importadas anteriormente são ignoradas, então o mesmo arquivo pode ser enviado novamente sem problemas."
 
 #: users/templates/users/data.html:639
 msgid "View annual summary"
@@ -8769,10 +8620,8 @@ msgid "Turn replies to my own catalog item posts into notes for the item"
 msgstr "Transformar respostas às minhas próprias publicações de itens do catálogo em anotações para o item"
 
 #: users/templates/users/preferences.html:187
-#, fuzzy
-#| msgid "Hide these categories in search results"
 msgid "Hide these categories in discovery and search results"
-msgstr "Ocultar estas categorias nos resultados de pesquisa"
+msgstr "Ocultar essas categorias na descoberta e nos resultados de busca"
 
 #: users/templates/users/preferences.html:201
 msgid "Disable these sources in external search"
@@ -9170,7 +9019,7 @@ msgstr "Este endereço de e-mail já está em uso."
 
 #: users/views/account.py:141
 msgid "Email addresses from this domain are not accepted."
-msgstr ""
+msgstr "Endereços de e-mail deste domínio não são aceitos."
 
 #: users/views/account.py:274 users/views/account.py:393
 msgid "Registration is for invitation only"
