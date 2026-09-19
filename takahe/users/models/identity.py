@@ -43,7 +43,7 @@ from pyld.jsonld import JsonLdError
 from stator.exceptions import TryAgainLater
 from stator.models import State, StateField, StateGraph, StatorModel
 
-from users.models.domain import Domain
+from users.models.domain import Domain, DomainStates
 from users.models.inbox_message import InboxMessage
 from users.models.system_actor import SystemActor
 
@@ -94,12 +94,15 @@ class IdentityStates(StateGraph):
 
     edited = State(try_interval=300, attempt_immediately=True)
     deleted = State(try_interval=300, attempt_immediately=True)
+    deleted_broadcasting = State(try_interval=300, attempt_immediately=True)
     deleted_fanned_out = State(externally_progressed=True)
 
     moved = State(try_interval=300, attempt_immediately=True)
     moved_fanned_out = State(externally_progressed=True)
 
+    deleted.transitions_to(deleted_broadcasting)
     deleted.transitions_to(deleted_fanned_out)
+    deleted_broadcasting.transitions_to(deleted_fanned_out)
 
     edited.transitions_to(updated)
     updated.transitions_to(edited)
@@ -118,7 +121,7 @@ class IdentityStates(StateGraph):
 
     @classmethod
     def group_deleted(cls):
-        return [cls.deleted, cls.deleted_fanned_out]
+        return [cls.deleted, cls.deleted_broadcasting, cls.deleted_fanned_out]
 
     @classmethod
     def targets_fan_out(cls, identity: "Identity", type_: str, broadcast=False) -> None:
@@ -127,17 +130,17 @@ class IdentityStates(StateGraph):
         from users.models import Follow
 
         if broadcast:
-            for target in (
-                Identity.objects.filter(local=False, shared_inbox_uri__isnull=False)
-                .exclude(state=IdentityStates.connection_issue)
-                .distinct("shared_inbox_uri")
-            ):
-                FanOut.objects.create(
-                    identity=target, type=type_, subject_identity=identity
-                )
+            FanOut.objects.bulk_create(
+                [
+                    FanOut(identity=target, type=type_, subject_identity=identity)
+                    for target in cls.acquainted_peers(identity)
+                ],
+                batch_size=500,
+            )
             return
         # Fan out to each target
         shared_inboxes = set()
+        fan_outs = []
         for follower in (
             Follow.objects.select_related("source", "target")
             .filter(target=identity)
@@ -148,12 +151,73 @@ class IdentityStates(StateGraph):
             if shared_uri and shared_uri in shared_inboxes:
                 continue
 
-            FanOut.objects.create(
-                identity=follower.source,
-                type=type_,
-                subject_identity=identity,
+            fan_outs.append(
+                FanOut(
+                    identity=follower.source,
+                    type=type_,
+                    subject_identity=identity,
+                )
             )
             shared_inboxes.add(shared_uri)
+        FanOut.objects.bulk_create(fan_outs, batch_size=500)
+
+    @classmethod
+    def acquainted_peers(cls, identity: "Identity") -> models.QuerySet["Identity"]:
+        """
+        Remote identities that already know this one, deduped by shared inbox.
+
+        These are the peers a deletion has to reach reliably, so they get a
+        FanOut each. Every other peer is told best effort, without a row.
+        """
+        from activities.models import Post, PostInteraction
+
+        from users.models import Follow
+
+        peer = models.OuterRef("pk")
+        # Exists() rather than reverse-relation filters: four OR-ed multi-valued
+        # joins multiply their rows before the distinct removes them again, so a
+        # peer with many follows and interactions costs their product.
+        return (
+            Identity.objects.filter(local=False, shared_inbox_uri__isnull=False)
+            .filter(
+                models.Exists(Follow.objects.filter(source=peer, target=identity))
+                | models.Exists(Follow.objects.filter(source=identity, target=peer))
+                | models.Exists(
+                    PostInteraction.objects.filter(identity=peer, post__author=identity)
+                )
+                | models.Exists(
+                    Post.mentions.through.objects.filter(
+                        identity=peer, post__author=identity
+                    )
+                )
+            )
+            .exclude(state=IdentityStates.connection_issue)
+            .order_by("shared_inbox_uri")
+            .distinct("shared_inbox_uri")
+        )
+
+    @classmethod
+    def unacquainted_peer_inboxes(cls, identity: "Identity") -> list[str]:
+        """
+        Shared inboxes of every other reachable peer, deduped.
+
+        A domain that has failed its nodeinfo fetch for a day is skipped. That
+        is what keeps the broadcast inside its deadline, because a dead host
+        costs a blocking DNS lookup before any HTTP timeout applies.
+        """
+        acquainted = cls.acquainted_peers(identity).values_list(
+            "shared_inbox_uri", flat=True
+        )
+        return list(
+            Identity.objects.filter(local=False, shared_inbox_uri__isnull=False)
+            .exclude(state=IdentityStates.connection_issue)
+            .exclude(domain__state=DomainStates.connection_issue)
+            .exclude(domain__blocked=True)
+            .exclude(shared_inbox_uri__in=list(acquainted))
+            .order_by("shared_inbox_uri")
+            .distinct("shared_inbox_uri")
+            .values_list("shared_inbox_uri", flat=True)
+        )
 
     @classmethod
     def handle_edited(cls, instance: "Identity"):
@@ -204,7 +268,10 @@ class IdentityStates(StateGraph):
         )
 
         if not instance.local:
-            return cls.updated
+            # Nothing to delete or announce for someone else's actor. This has
+            # to be a state "deleted" can reach, or the transition raises and
+            # the row retries every try_interval for good.
+            return cls.deleted_fanned_out
 
         # Delete local data. The identity row itself is kept as a tombstone,
         # so every cascade that hangs off it is dead code: anything keyed on
@@ -250,6 +317,39 @@ class IdentityStates(StateGraph):
         for following in Follow.objects.filter(source=instance):
             following.transition_perform(FollowStates.undone)
 
+        return cls.deleted_broadcasting
+
+    @classmethod
+    def handle_deleted_broadcasting(cls, instance: "Identity"):
+        """
+        Tells every remaining peer, best effort and without queue rows.
+
+        This is its own state so that a crash, a deploy or an overrun repeats
+        only the broadcast, where a duplicate Delete is harmless, and never the
+        irreversible work that handle_deleted does.
+        """
+        from users.services.delete_broadcast import (
+            broadcast_identity_deletion,
+            identity_broadcast_lock,
+        )
+
+        if not instance.local:
+            return cls.deleted_fanned_out
+
+        with identity_broadcast_lock(instance.pk) as acquired:
+            if not acquired:
+                # Another stator replica is already broadcasting this one. Its
+                # lock outlives our row lock, which stator clears after 300 s
+                # whether or not the handler has finished. Stay in this state
+                # rather than finishing on its behalf: if it then dies, the
+                # retry is the only thing that would ever send the rest.
+                logger.info(
+                    "Delete broadcast for %s is already running elsewhere", instance.pk
+                )
+                return None
+            broadcast_identity_deletion(
+                instance, cls.unacquainted_peer_inboxes(instance)
+            )
         return cls.deleted_fanned_out
 
     @classmethod
