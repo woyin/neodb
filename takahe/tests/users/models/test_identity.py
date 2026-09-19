@@ -658,3 +658,301 @@ def test_fetch_actor_invalid_idna_host(config_system, monkeypatch, settings):
         assert identity.fetch_actor() is False
     finally:
         settings.SETUP.NO_FEDERATION = original
+
+
+@pytest.mark.django_db
+@pytest.mark.httpx_mock(assert_all_requests_were_expected=False)
+def test_fetch_actor_handle_already_taken(httpx_mock, config_system, monkeypatch):
+    """
+    Two actors can share a preferredUsername on one domain, such as a Lemmy
+    user and a community of the same name, but (username, domain) is unique.
+    The save is lost, so fetch_actor must report failure rather than enqueue a
+    neodb sync for a row that still holds none of the fetched values
+    (EGGPLANT-1JM).
+    """
+    domain = Domain.get_remote_domain("lemmy.example")
+    Identity.objects.create(
+        actor_uri="https://lemmy.example/c/books",
+        username="books",
+        domain=domain,
+        local=False,
+    )
+    other = Identity.objects.create(
+        actor_uri="https://lemmy.example/u/books",
+        local=False,
+    )
+    httpx_mock.add_response(
+        url="https://lemmy.example/u/books",
+        headers={"Content-Type": "application/activity+json"},
+        json={
+            "@context": ["https://www.w3.org/ns/activitystreams"],
+            "id": "https://lemmy.example/u/books",
+            "type": "Person",
+            "preferredUsername": "books",
+            "inbox": "https://lemmy.example/u/books/inbox",
+        },
+    )
+    enqueued = []
+    monkeypatch.setattr(
+        "django.conf.settings.NEODB_MQ",
+        type("Queue", (), {"enqueue": lambda self, *a, **kw: enqueued.append(a)})(),
+    )
+
+    assert other.fetch_actor() is False
+
+    other.refresh_from_db()
+    assert other.username is None
+    assert other.domain_id is None
+    assert enqueued == []
+
+
+@pytest.mark.django_db
+@pytest.mark.httpx_mock(assert_all_requests_were_expected=False)
+def test_fetch_actor_rejects_alias_actor_uri(httpx_mock, config_system, monkeypatch):
+    """
+    Several servers publish one actor under several paths, and the actor GET
+    follows redirects, so a row can be left pointing at an alias. Its document
+    names the canonical id, and storing it would let the alias take the handle
+    the canonical row needs (EGGPLANT-1JM).
+    """
+    canonical = Identity.objects.create(
+        actor_uri="https://example.com/ruben",
+        local=False,
+    )
+    alias = Identity.objects.create(
+        actor_uri="https://example.com/users/ruben",
+        local=False,
+    )
+    httpx_mock.add_response(
+        url="https://example.com/users/ruben",
+        headers={"Content-Type": "application/activity+json"},
+        json={
+            "@context": ["https://www.w3.org/ns/activitystreams"],
+            "id": "https://example.com/ruben",
+            "type": "Person",
+            "preferredUsername": "ruben",
+            "inbox": "https://example.com/ruben/inbox",
+        },
+    )
+    enqueued = []
+    monkeypatch.setattr(
+        "django.conf.settings.NEODB_MQ",
+        type("Queue", (), {"enqueue": lambda self, *a, **kw: enqueued.append(a)})(),
+    )
+
+    assert alias.fetch_actor() is False
+
+    alias.refresh_from_db()
+    assert alias.username is None
+    assert alias.domain_id is None
+    assert enqueued == []
+    # The handle is still free for the actor that claims that id
+    canonical.refresh_from_db()
+    assert canonical.username is None
+
+
+@pytest.mark.django_db
+@pytest.mark.httpx_mock(assert_all_requests_were_expected=False)
+def test_fetch_actor_keeps_host_handle_when_webfinger_does_not_loop_back(
+    httpx_mock, config_system
+):
+    """
+    WebFinger can answer for a different actor, as a WordPress site pointing at
+    the author's Mastodon account does. That handle belongs to the actor it
+    points at, so keep the one derived from this actor's own host rather than
+    claim a handle this row cannot hold.
+    """
+    identity = Identity.objects.create(
+        actor_uri="https://blog.example/?author=35",
+        local=False,
+    )
+    httpx_mock.add_response(
+        url="https://blog.example/?author=35",
+        headers={"Content-Type": "application/activity+json"},
+        json={
+            "@context": ["https://www.w3.org/ns/activitystreams"],
+            "id": "https://blog.example/?author=35",
+            "type": "Person",
+            "preferredUsername": "luciana",
+            "inbox": "https://blog.example/inbox",
+        },
+        is_reusable=True,
+    )
+    httpx_mock.add_response(
+        url="https://blog.example/.well-known/host-meta",
+        status_code=404,
+        is_reusable=True,
+    )
+    httpx_mock.add_response(
+        url="https://blog.example/.well-known/webfinger?resource=acct:luciana@blog.example",
+        json={
+            "subject": "acct:luciana@other.example",
+            "links": [
+                {
+                    "rel": "self",
+                    "type": "application/activity+json",
+                    "href": "https://other.example/users/luciana",
+                },
+            ],
+        },
+        is_reusable=True,
+    )
+
+    assert identity.fetch_actor()
+
+    identity.refresh_from_db()
+    assert identity.username == "luciana"
+    assert identity.domain_id == "blog.example"
+
+    # The check must hold on every refresh, not only on the first fetch, or
+    # the next one moves the row onto the other actor's handle
+    assert identity.fetch_actor()
+
+    identity.refresh_from_db()
+    assert identity.username == "luciana"
+    assert identity.domain_id == "blog.example"
+
+
+@pytest.mark.django_db
+@pytest.mark.httpx_mock(assert_all_requests_were_expected=False)
+def test_fetch_actor_keeps_stored_handle_when_webfinger_does_not_loop_back(
+    httpx_mock, config_system
+):
+    """
+    A row stored before the loop-back guard existed holds a handle webfinger
+    would not verify today. Refreshing it must leave that handle alone rather
+    than rewrite a working identity.
+    """
+    domain = Domain.get_remote_domain("other.example")
+    identity = Identity.objects.create(
+        actor_uri="https://blog.example/?author=35",
+        username="luciana",
+        domain=domain,
+        name="Old Name",
+        local=False,
+    )
+    httpx_mock.add_response(
+        url="https://blog.example/?author=35",
+        headers={"Content-Type": "application/activity+json"},
+        json={
+            "@context": ["https://www.w3.org/ns/activitystreams"],
+            "id": "https://blog.example/?author=35",
+            "type": "Person",
+            "preferredUsername": "luciana",
+            "inbox": "https://blog.example/inbox",
+            "name": "New Name",
+        },
+    )
+    httpx_mock.add_response(
+        url="https://blog.example/.well-known/host-meta",
+        status_code=404,
+    )
+    httpx_mock.add_response(
+        url="https://blog.example/.well-known/webfinger?resource=acct:luciana@blog.example",
+        json={
+            "subject": "acct:luciana@other.example",
+            "links": [
+                {
+                    "rel": "self",
+                    "type": "application/activity+json",
+                    "href": "https://other.example/users/luciana",
+                },
+            ],
+        },
+    )
+
+    assert identity.fetch_actor()
+
+    identity.refresh_from_db()
+    assert identity.name == "New Name"
+    assert identity.username == "luciana"
+    assert identity.domain_id == "other.example"
+
+
+@pytest.mark.django_db
+@pytest.mark.httpx_mock(assert_all_requests_were_expected=False)
+def test_fetch_actor_adopts_canonical_domain_when_webfinger_loops_back(
+    httpx_mock, config_system
+):
+    """
+    A server whose actors live on one host but whose handles use another is
+    legitimate, and webfinger looping back to this actor proves it. The
+    loop-back guard must not break that canonicalisation.
+    """
+    identity = Identity.objects.create(
+        actor_uri="https://backend.example/users/michael",
+        local=False,
+    )
+    httpx_mock.add_response(
+        url="https://backend.example/users/michael",
+        headers={"Content-Type": "application/activity+json"},
+        json={
+            "@context": ["https://www.w3.org/ns/activitystreams"],
+            "id": "https://backend.example/users/michael",
+            "type": "Person",
+            "preferredUsername": "michael",
+            "inbox": "https://backend.example/users/michael/inbox",
+        },
+    )
+    httpx_mock.add_response(
+        url="https://backend.example/.well-known/host-meta",
+        status_code=404,
+    )
+    httpx_mock.add_response(
+        url="https://backend.example/.well-known/webfinger?resource=acct:michael@backend.example",
+        json={
+            "subject": "acct:michael@news.example",
+            "links": [
+                {
+                    "rel": "self",
+                    "type": "application/activity+json",
+                    "href": "https://backend.example/users/michael",
+                },
+            ],
+        },
+    )
+
+    assert identity.fetch_actor()
+
+    identity.refresh_from_db()
+    assert identity.username == "michael"
+    assert identity.domain_id == "news.example"
+
+
+@pytest.mark.django_db
+@pytest.mark.httpx_mock(assert_all_requests_were_expected=False)
+def test_fetch_actor_still_refreshes_alias_that_already_holds_a_handle(
+    httpx_mock, config_system
+):
+    """
+    Rows fetched before the alias and loop-back guards existed already hold a
+    handle and work. Refusing their refresh would strand a working identity in
+    connection_issue, so the guards apply only to rows yet to claim a handle.
+    """
+    domain = Domain.get_remote_domain("example.com")
+    identity = Identity.objects.create(
+        actor_uri="https://example.com/users/ruben",
+        username="ruben",
+        domain=domain,
+        name="Old Name",
+        local=False,
+    )
+    httpx_mock.add_response(
+        url="https://example.com/users/ruben",
+        headers={"Content-Type": "application/activity+json"},
+        json={
+            "@context": ["https://www.w3.org/ns/activitystreams"],
+            "id": "https://example.com/ruben",
+            "type": "Person",
+            "preferredUsername": "ruben",
+            "inbox": "https://example.com/ruben/inbox",
+            "name": "New Name",
+        },
+    )
+
+    assert identity.fetch_actor()
+
+    identity.refresh_from_db()
+    assert identity.name == "New Name"
+    assert identity.username == "ruben"
+    assert identity.domain_id == "example.com"

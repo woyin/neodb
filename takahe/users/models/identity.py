@@ -1347,6 +1347,28 @@ class Identity(StatorModel):
             return False
         if "type" not in document:
             return False
+        # The guards below decide whether this document may take a handle, so
+        # neither may disturb the handle a row already holds: it was fetched
+        # successfully before they existed, and refusing or rewriting it would
+        # strand a working identity in connection_issue. Repairing those rows
+        # is a migration's job, not a read path's.
+        stored_username = self.username
+        stored_domain_id = self.domain_id
+        unclaimed = not stored_username
+        # An actor that names a different id is an alias of that actor, not
+        # this row. Several servers publish one actor under several paths, and
+        # the actor GET follows redirects, so actor_uri can be left pointing at
+        # the alias. Storing it anyway lets the alias take the handle over the
+        # canonical row, which then cannot be saved at all and strands its
+        # posts under a handle-less author.
+        document_id = document.get("id")
+        if unclaimed and isinstance(document_id, str) and document_id != self.actor_uri:
+            logger.info(
+                "Actor %s identifies as %s, not storing it as a separate identity",
+                self.actor_uri,
+                document_id,
+            )
+            return False
         # Compare the normalised username, so a list/language-wrapped value
         # that decodes to the stored one doesn't look like a change
         username = _remote_text(document.get("preferredUsername"))
@@ -1413,7 +1435,25 @@ class Identity(StatorModel):
                 webfinger_actor, webfinger_handle = self.fetch_webfinger(
                     f"{self.username}@{actor_url_parts.hostname}"
                 )
-                if webfinger_handle:
+                if webfinger_handle and webfinger_actor != self.actor_uri:
+                    # WebFinger answered for a different actor, so the handle
+                    # it reports is that actor's, not ours. Never move this row
+                    # onto it: keep the handle the row already holds, or the
+                    # one derived from the actor's own host when it holds none
+                    # yet, as Mastodon and Pleroma do. Keeping rather than
+                    # skipping the check leaves rows stored before this guard
+                    # untouched and still verifies every later refresh.
+                    if stored_username and stored_domain_id:
+                        self.username = stored_username
+                        self.domain = Domain.get_remote_domain(stored_domain_id)
+                    logger.info(
+                        "WebFinger for %s points at %s, keeping %s@%s",
+                        self.actor_uri,
+                        webfinger_actor,
+                        self.username,
+                        self.domain_id,
+                    )
+                elif webfinger_handle:
                     webfinger_username, webfinger_domain = webfinger_handle.split("@")
                     self.username = webfinger_username
                     self.domain = Domain.get_remote_domain(webfinger_domain)
@@ -1457,6 +1497,28 @@ class Identity(StatorModel):
                 self.pk: int | None = other_row.pk
                 with transaction.atomic():
                     self.save()
+            else:
+                # An existing row cannot take the handle it just fetched,
+                # because another row already holds it: an alias actor_uri for
+                # an actor already stored, or two actors the unique constraint
+                # on (username, domain) cannot both hold, such as a Lemmy user
+                # and a community of the same name. The save is lost either
+                # way, so report the failure instead of continuing as if the
+                # row now held the fetched values.
+                other_row = (
+                    Identity.objects.filter(username=self.username, domain=self.domain)
+                    .exclude(pk=self.pk)
+                    .first()
+                )
+                logger.info(
+                    "Cannot save actor %s as %s@%s, already held by %s: %s",
+                    self.actor_uri,
+                    self.username,
+                    self.domain_id,
+                    other_row.actor_uri if other_row else "?",
+                    e,
+                )
+                return False
 
         # Fetch featured tags, posts, counts in a followup task
         InboxMessage.create_internal(
