@@ -88,16 +88,12 @@ def pending_source_for_post_attachment(pk: int) -> str:
 def takahe_attachment_urls(atta: "PostAttachment") -> tuple[str, str]:
     """``(full, preview)`` absolute URLs for a takahe attachment, never raising.
 
-    Mirrors ``PostAttachment.full_url()`` / ``thumbnail_url()`` but resolves the
-    absolute form here instead of calling them. Those wrap the value in
-    ``RelativeAbsoluteUrl``, whose constructor *raises* on a schemeless URL --
-    and schemeless is exactly what ``file.url`` is whenever ``TAKAHE_MEDIA_URL``
-    is relative, which is the settings default. ``compose.yml`` happens to set
-    an absolute one, so the breakage only shows up elsewhere (CI, and any
-    deployment leaving the default).
-
-    Reading ``.absolute`` on that path aborts ``Note.update_by_ap_object``, so
-    it would take inbound federation of every note with media down with it.
+    Mirrors ``PostAttachment.full_url()`` / ``thumbnail_url()`` but resolves
+    the absolute form here: ``field.url`` raises when a storage has no base
+    URL, and this runs inside ``Note.update_by_ap_object``, where that would
+    take inbound federation of every note with media down with it. It also
+    absolutizes against ``SITE_INFO["site_url"]``, which a deployment can
+    point elsewhere, and gates the proxy fallback on images, as below.
     """
     site = settings.SITE_INFO["site_url"].rstrip("/")
 
@@ -247,7 +243,11 @@ class Attachment(models.Model):
         return (self.mimetype or "unknown").split("/")[0]
 
     def to_json(self) -> dict[str, Any]:
-        """Legacy ``Note.attachments`` JSON entry for this row."""
+        """Legacy ``Note.attachments`` JSON entry for this row.
+
+        The urls are whatever the storage served, absolute or a path, and
+        every reader of this column takes both.
+        """
         return {
             "type": self.type,
             "mimetype": self.mimetype,

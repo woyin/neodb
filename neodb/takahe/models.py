@@ -838,7 +838,10 @@ class Identity(models.Model):
     def to_mastodon_json(self, source=False):
         missing = StaticAbsoluteUrl("img/missing.png").absolute
         header_image = self.local_image_url() or missing
-        icon_image = self.local_icon_url() or missing
+        # local_icon_url is also a template src, so it stays a path there
+        # and is resolved here: an avatar in the api has to be absolute
+        icon = self.local_icon_url()
+        icon_image = AutoAbsoluteUrl(icon).absolute if icon else missing
         metadata_value_text = (
             " ".join([m["value"] for m in self.metadata]) if self.metadata else ""
         )
@@ -2029,10 +2032,12 @@ class PostAttachment(models.Model):
         ]
 
     def thumbnail_url(self) -> RelativeAbsoluteUrl:
+        # a storage url is schemeless whenever its base url is a path, and
+        # RelativeAbsoluteUrl raises on that; an absolute one is kept as is
         if self.thumbnail:
-            return RelativeAbsoluteUrl(self.thumbnail.url)
+            return AutoAbsoluteUrl(self.thumbnail.url)
         elif self.file:
-            return RelativeAbsoluteUrl(self.file.url)
+            return AutoAbsoluteUrl(self.file.url)
         else:
             return ProxyAbsoluteUrl(
                 f"/proxy/post_attachment/{self.pk}/",
@@ -2041,7 +2046,7 @@ class PostAttachment(models.Model):
 
     def full_url(self):
         if self.file:
-            return RelativeAbsoluteUrl(self.file.url)
+            return AutoAbsoluteUrl(self.file.url)
         if self.is_image():
             return ProxyAbsoluteUrl(
                 f"/proxy/post_attachment/{self.pk}/",
