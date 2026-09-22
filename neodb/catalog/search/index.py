@@ -33,6 +33,13 @@ def _update_catalog_index_task():
     logger.info(f"Catalog index updated for {updated} items")
 
 
+def _year_(s: str) -> int:
+    # date is int32 YYYYMMDD, so a longer year overflows it and fails the
+    # entire search instead of just this filter
+    year = int_(s)
+    return year if 1 <= year <= 9999 else 0
+
+
 def _cat_to_class(cat: str) -> list[str]:
     from catalog.models import ItemCategory, item_categories
 
@@ -114,12 +121,12 @@ class CatalogQueryParser(QueryParser):
         # parse date filter from query string
         v = self.parsed_fields.get("year", "").split("..")
         if len(v) == 2:
-            start = int_(v[0])
-            end = int_(v[1])
+            start = _year_(v[0])
+            end = _year_(v[1])
             if start and end:
                 self.filter_by["date"] = [f"{start * 10000}..{end * 10000 + 9999}"]
         elif len(v) == 1:
-            year = int_(v[0])
+            year = _year_(v[0])
             if year:
                 self.filter_by["date"] = [f"{year * 10000}..{year * 10000 + 9999}"]
 
