@@ -388,9 +388,8 @@ class SiteManager:
             return 0
         # Re-check person__isnull in the UPDATE WHERE clause so a concurrent
         # worker that linked the same row to a different person between our
-        # SELECT and our UPDATE is not silently overwritten. The returned
-        # count reflects only rows we actually changed; a concurrent worker
-        # that linked the same row to a different person is excluded.
+        # SELECT and our UPDATE is not silently overwritten; the returned count
+        # then reflects only the rows we actually changed.
         linked_count = ItemCredit.objects.filter(
             pk__in=ids, person__isnull=True
         ).update(person=person)
@@ -424,7 +423,6 @@ class SiteManager:
         # localized_name contains the link's display name. Driving from the
         # itemcredit (item) index over the handful of people attached to one
         # item keeps this off the slow DISTINCT scan over catalog_people
-        # (EGGPLANT-1CV).
         base = People.objects.filter(
             is_deleted=False,
             merged_to_item__isnull=True,

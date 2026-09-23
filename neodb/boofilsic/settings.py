@@ -216,8 +216,7 @@ if _parsed_search_url.scheme == "typesense":
         # old 2s and get killed, then retried immediately with no backoff. Give
         # queries enough headroom to finish in one attempt. num_retries is set
         # per read/write client in common.search.index (reads never retry so a
-        # slow query can't turn into a consecutive-HTTP storm; see
-        # NEODB-SOCIAL-7RV).
+        # slow query can't turn into a consecutive-HTTP storm).
         "connection_timeout_seconds": 4,
     }
     TYPESENSE_INDEX_NAME = _parsed_search_url.path[1:]
