@@ -358,6 +358,10 @@ class IdentityStates(StateGraph):
         if identity.local:
             identity.calculate_stats()
             return cls.updated
+        # A row kept only to resolve one of an actor's URIs holds nothing to
+        # refresh, and its endpoint is the other row's business
+        if identity.canonical_id:
+            return cls.updated
         # Run the actor fetch and progress to updated if it succeeds
         if identity.fetch_actor():
             return cls.updated
@@ -453,6 +457,18 @@ class Identity(StatorModel):
     # A list of other actor URIs - if this account was moved, should contain
     # the one URI it was moved to.
     aliases = models.JSONField(blank=True, null=True)
+
+    # Set when this row turned out to be another actor under a second URI,
+    # which several servers publish. The row is kept, because peers go on
+    # addressing the actor by it, and everything it holds belongs to the
+    # identity here.
+    canonical = models.ForeignKey(
+        "self",
+        blank=True,
+        null=True,
+        on_delete=models.SET_NULL,
+        related_name="alias_identities",
+    )
 
     # Calculated (or fetched) statistics: follower/post counts, etc.
     stats = models.JSONField(blank=True, null=True)
@@ -739,7 +755,11 @@ class Identity(StatorModel):
         if not uri:
             raise cls.DoesNotExist("No actor_uri provided")
         try:
-            return cls.objects.get(actor_uri=uri)
+            identity = cls.objects.get(actor_uri=uri)
+            # A peer may go on addressing an actor by a URI we since learned
+            # is a second name for another row. One hop only: a merge resolves
+            # its own target first, so a chain never forms.
+            return identity.canonical or identity
         except cls.DoesNotExist:
             if create:
                 if transient:
@@ -758,6 +778,31 @@ class Identity(StatorModel):
                 raise cls.DoesNotExist(f"No identity found with actor_uri {uri}")
 
     ### Dynamic properties ###
+
+    @property
+    def resolved(self) -> "Identity":
+        """
+        This identity, or the one it turned out to be a second URI for.
+
+        A client holds the numeric id it was given, which may be one a merge
+        has since emptied, and acting on that row would report success while
+        doing nothing the actor ever sees.
+        """
+        return self.canonical or self
+
+    def is_actor_uri(self, uri: str) -> bool:
+        """
+        Whether this identity is the actor named by a URI.
+
+        A peer that knows the actor by one of its other URIs names that one in
+        the activities it sends, so comparing against actor_uri alone rejects
+        the actor's own deletes and undoes.
+        """
+        if not uri:
+            return False
+        if uri == self.actor_uri:
+            return True
+        return self.alias_identities.filter(actor_uri=uri).exists()
 
     @property
     def name_or_handle(self):
@@ -1327,6 +1372,11 @@ class Identity(StatorModel):
 
         if self.local:
             raise ValueError("Cannot fetch local identities")
+        if self.canonical_id:
+            # This row is a second URI for an actor stored elsewhere. Asking
+            # the retired endpoint gains nothing and a 410 there would delete
+            # the row, taking the mapping with it.
+            return False
         if (self.actor_uri or "").lower().split(":")[0] not in ["http", "https"]:
             return False
         try:

@@ -78,6 +78,10 @@ def test_releasable_alias_gives_the_handle_back(
     alias.refresh_from_db()
     assert alias.username is None
     assert alias.domain_id is None
+    # And peers still addressing the actor by the alias URI resolve to the
+    # identity that now holds everything
+    assert alias.canonical_id == canonical.pk
+    assert Identity.by_actor_uri(alias.actor_uri).pk == canonical.pk
 
 
 @pytest.mark.django_db
@@ -359,3 +363,81 @@ def test_clashing_row_aborts_the_whole_merge(httpx_mock, config_system, _no_fede
     assert post.author_id == alias.pk
     assert Follow.objects.filter(source=alias, target=target).exists()
     assert Follow.objects.filter(source=canonical, target=target).exists()
+
+
+@pytest.mark.django_db
+@pytest.mark.httpx_mock(assert_all_requests_were_expected=False)
+def test_merge_follows_a_target_merged_earlier_in_the_batch(
+    httpx_mock, config_system, _no_federation
+):
+    """
+    A whole batch is classified before any of it is repaired, so the target
+    can be merged away in between. by_actor_uri takes one hop, so a chain
+    would leave the actor resolving to an emptied row.
+    """
+    domain = Domain.get_remote_domain("example.com")
+    final = Identity.objects.create(
+        actor_uri="https://example.com/ruben",
+        local=False,
+    )
+    middle = Identity.objects.create(
+        actor_uri="https://example.com/users/ruben",
+        username="ruben",
+        domain=domain,
+        local=False,
+    )
+    first = Identity.objects.create(
+        actor_uri="https://example.com/@ruben",
+        local=False,
+    )
+    post = Post.objects.create(author=first, local=False, content="<p>hi</p>")
+    mock_actor(httpx_mock, final.actor_uri, final.actor_uri, "ruben")
+    mock_actor(httpx_mock, middle.actor_uri, final.actor_uri, "ruben")
+    mock_actor(httpx_mock, first.actor_uri, middle.actor_uri, "ruben")
+
+    run(fix=True, yes=True)
+
+    # Whichever order they were repaired in, every URI reaches the one
+    # identity, in a single hop
+    first.refresh_from_db()
+    middle.refresh_from_db()
+    assert first.canonical_id == final.pk
+    assert middle.canonical_id == final.pk
+    assert Identity.by_actor_uri(first.actor_uri).pk == final.pk
+    assert Identity.by_actor_uri(middle.actor_uri).pk == final.pk
+    post.refresh_from_db()
+    assert post.author_id == final.pk
+
+
+@pytest.mark.django_db
+@pytest.mark.httpx_mock(assert_all_requests_were_expected=False)
+def test_already_merged_aliases_do_not_fill_the_scan(
+    httpx_mock, config_system, _no_federation
+):
+    """
+    A merged alias keeps a null handle, so it went on matching the scan. A
+    limited, primary-key-ordered run would fill up with rows it has already
+    repaired and never reach the ones still broken.
+    """
+    domain = Domain.get_remote_domain("example.com")
+    canonical = Identity.objects.create(
+        actor_uri="https://example.com/ruben",
+        username="ruben",
+        domain=domain,
+        local=False,
+    )
+    Identity.objects.create(
+        actor_uri="https://example.com/users/ruben",
+        local=False,
+        canonical=canonical,
+    )
+    still_broken = Identity.objects.create(
+        actor_uri="https://example.com/users/nobody",
+        local=False,
+    )
+    mock_actor(httpx_mock, still_broken.actor_uri, still_broken.actor_uri, "nobody")
+
+    output = run()
+
+    assert "Examining 1 identities" in output
+    assert still_broken.actor_uri in output

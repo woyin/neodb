@@ -402,6 +402,7 @@ class Identity(models.Model):
 
     if TYPE_CHECKING:
         domain_id: str
+        canonical_id: int | None
         inbound_follows: "models.QuerySet[Follow]"
         hashtag_features: "models.QuerySet[HashtagFeature]"
 
@@ -491,6 +492,17 @@ class Identity(models.Model):
     # A list of other actor URIs - if this account was moved, should contain
     # the one URI it was moved to.
     aliases = models.JSONField(blank=True, null=True)
+
+    # Set when this row turned out to be another actor under a second URI.
+    # Takahe writes it; fixapidentitymirror reads it to move the alias
+    # mirror's data onto the identity it names.
+    canonical = models.ForeignKey(
+        "self",
+        blank=True,
+        null=True,
+        on_delete=models.SET_NULL,
+        related_name="alias_identities",
+    )
 
     # Calculated (or fetched) statistics: follower/post counts, etc.
     stats = models.JSONField(blank=True, null=True)
